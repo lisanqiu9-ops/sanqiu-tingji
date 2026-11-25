@@ -1,12 +1,17 @@
-会译 (HuiYi)
-===========
+三秋听记 (SanqiuTingji)
+======================
 
-Parts of this software are ported from Cicada (知了), https://github.com/wquguru/cicada,
+This software is an independently maintained derivative based on 会译 (HuiYi),
+https://github.com/LingyiChen-AI/huiyi, licensed under the Apache License, Version 2.0.
+Substantial modifications include independent branding, packaging/update isolation,
+Windows 11 UI/motion redesign, local AI CLI bridge, and notes workshop features.
+This software is not affiliated with 会译 (HuiYi) or Cicada (知了).
+
+Parts of the upstream HuiYi software were ported from Cicada (知了), https://github.com/wquguru/cicada,
 licensed under the Apache License, Version 2.0. Ported logic (rewritten in C#): the Ling client
 conventions, meeting notes prompt and parser, heard-text cleanup and joining, meeting-end
 detection, translation chain, speaker clustering and labelling rules, speaker name guessing, and the
-session record format, together with their unit tests. The user interface is this project's own design.
-"Cicada" and "知了" are names of that project; this software is not affiliated with it.
+session record format, together with their unit tests. "Cicada" and "知了" are names of that project.
 
 Third-party components, downloaded or referenced, not bundled in source:
 - sherpa-onnx (k2-fsa), Apache-2.0
@@ -19,4 +24,4 @@ Third-party components, downloaded or referenced, not bundled in source:
 
 Bundled data:
 - pinyin-data (mozillazg), MIT, Copyright (c) 2016 mozillazg: the toneless pinyin table in
-  src/HuiYi.Core/Resources/pinyin.txt (derived from pinyin.txt), used for the glossary's sound-alike matching.
+  src/SanqiuTingji.Core/Resources/pinyin.txt (derived from pinyin.txt), used for the glossary's sound-alike matching.

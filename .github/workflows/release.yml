@@ -1,5 +1,5 @@
 # Pushing a tag like v0.2.0 builds and publishes that version: tests, a self-contained publish, the
-# installer (HuiYi-Setup.exe), the portable zip, and the update package and feed that installed
+# installer (SanqiuTingji-Setup.exe), the portable zip, and the update package and feed that installed
 # copies check, all on the GitHub release, with the notes in release-notes/<tag>.md (else the feat: /
 # fix: commits since the last tag).
 name: release
@@ -33,16 +33,16 @@ jobs:
           "VERSION=$v" >> $env:GITHUB_ENV
 
       - name: Test
-        run: dotnet test tests/HuiYi.Tests -c Release
+        run: dotnet test tests/SanqiuTingji.Tests -c Release
 
       - name: Publish
         shell: pwsh
         run: |
-          dotnet publish src/HuiYi/HuiYi.csproj -c Release -r win-x64 --self-contained true `
+          dotnet publish src/SanqiuTingji/SanqiuTingji.csproj -c Release -r win-x64 --self-contained true `
             -p:PublishReadyToRun=true -p:DebugType=none -p:Version=$env:VERSION -o publish
           Copy-Item LICENSE, NOTICE publish
 
-      # Same version as the Velopack package in src/HuiYi/HuiYi.csproj.
+      # Same version as the Velopack package in src/SanqiuTingji/SanqiuTingji.csproj.
       - name: Install vpk
         run: dotnet tool install -g vpk --version 1.2.161
 
@@ -67,7 +67,7 @@ jobs:
             if ($feat) { $body += @("## 新功能", "") + $feat + "" }
             if ($fix) { $body += @("## 修复", "") + $fix }
           }
-          $downloads = @("## 下载", "", "- **HuiYi-Setup.exe**：安装包，可以选安装位置，之后会自动更新", "- **HuiYi.App-win-Portable.zip**：免安装版，解压即用，也会自动更新")
+          $downloads = @("## 下载", "", "- **SanqiuTingji-Setup.exe**：安装包，可以选安装位置，之后会自动更新", "- **SanqiuTingji.App-win-Portable.zip**：免安装版，解压即用，也会自动更新")
           $commits = git log $range --no-merges --format="* %s ([%h]($env:REPO_URL/commit/%H))"
           $page = $body + @("") + $downloads + @("", "---", "", "## 完整改动", "", "<details>", "<summary>查看全部提交</summary>", "") + $commits + @("", "</details>", "")
           if ($prev) { $page += "完整对比：$env:REPO_URL/compare/$prev...$tag" }
@@ -83,16 +83,16 @@ jobs:
       - name: Pack
         shell: pwsh
         run: |
-          # No delta packages: with the Chinese title the stub is 会译_ExecutionStub.exe, and the zstd that
+          # No delta packages: with the Chinese title the stub is 三秋听记_ExecutionStub.exe, and the zstd that
           # vpk runs for deltas can't open non-ASCII paths. Updates download the full package instead.
-          vpk pack --packId HuiYi.App --packVersion $env:VERSION --packDir publish --mainExe HuiYi.exe `
-            --packTitle "会译" --packAuthors "HuiYi" --icon assets/HuiYi.ico --delta none `
+          vpk pack --packId SanqiuTingji.App --packVersion $env:VERSION --packDir publish --mainExe SanqiuTingji.exe `
+            --packTitle "三秋听记" --packAuthors "三秋听记" --icon assets/SanqiuTingji.ico --delta none `
             --runtime win-x64 --releaseNotes notes-app.md --outputDir releases
           # The installer people download: lets them pick the folder, then runs the Setup.exe above.
-          dotnet build installer/HuiYi.Setup.csproj -c Release -p:Version=$env:VERSION `
-            -p:VelopackSetup="$PWD/releases/HuiYi.App-win-Setup.exe" -o installer-out
+          dotnet build installer/SanqiuTingji.Setup.csproj -c Release -p:Version=$env:VERSION `
+            -p:VelopackSetup="$PWD/releases/SanqiuTingji.App-win-Setup.exe" -o installer-out
           New-Item -ItemType Directory -Force portable | Out-Null
-          Copy-Item installer-out/HuiYi-Setup.exe portable/HuiYi-Setup.exe
+          Copy-Item installer-out/SanqiuTingji-Setup.exe portable/SanqiuTingji-Setup.exe
 
       - name: Publish the release
         shell: pwsh
@@ -101,9 +101,9 @@ jobs:
         run: |
           $tag = "${{ github.ref_name }}"
           vpk upload github --repoUrl $env:REPO_URL --token $env:GH_TOKEN --outputDir releases `
-            --tag $tag --releaseName "会译 $env:VERSION" --publish --merge
-          gh release upload $tag "portable/HuiYi-Setup.exe" --clobber
-          # Only what people or the updater use: Velopack's own Setup.exe is inside HuiYi-Setup.exe, and
+            --tag $tag --releaseName "三秋听记 $env:VERSION" --publish --merge
+          gh release upload $tag "portable/SanqiuTingji-Setup.exe" --clobber
+          # Only what people or the updater use: Velopack's own Setup.exe is inside SanqiuTingji-Setup.exe, and
           # RELEASES is the old Squirrel feed (installed copies read releases.win.json).
-          foreach ($extra in "HuiYi.App-win-Setup.exe", "RELEASES") { gh release delete-asset $tag $extra -y }
+          foreach ($extra in "SanqiuTingji.App-win-Setup.exe", "RELEASES") { gh release delete-asset $tag $extra -y }
           gh release edit $tag --notes-file notes.md

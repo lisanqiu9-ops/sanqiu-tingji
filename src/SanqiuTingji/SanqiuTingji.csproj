@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <AssemblyName>SanqiuTingji</AssemblyName>
+    <Product>三秋听记</Product>
+    <Title>三秋听记</Title>
+    <RootNamespace>SanqiuTingji.App</RootNamespace>
+    <Version>0.3.6</Version>
+    <!-- Program.Main runs Velopack's install / update hooks before WPF starts. -->
+    <StartupObject>SanqiuTingji.App.Program</StartupObject>
+    <!-- Regenerate with SanqiuTingji.exe and the export-icon switch (see Icons.SaveIco) when the mark changes. -->
+    <ApplicationIcon>..\..\assets\SanqiuTingji.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SanqiuTingji.Core\SanqiuTingji.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="H.NotifyIcon.Wpf" Version="2.3.2" />
+    <!-- Keep in step with the vpk tool that packs releases (scripts/package.ps1). -->
+    <PackageReference Include="Velopack" Version="1.2.161" />
+  </ItemGroup>
+
+</Project>

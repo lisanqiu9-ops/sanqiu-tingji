@@ -1,4 +1,4 @@
-using HuiYi.Localization;
+using SanqiuTingji.Localization;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-namespace HuiYi.Setup;
+namespace SanqiuTingji.Setup;
 
 internal static class Program
 {
@@ -28,7 +28,7 @@ internal static class Program
 /// updates itself in place afterwards.
 internal sealed class SetupForm : Form
 {
-    private const string PackId = "HuiYi.App";
+    private const string PackId = "SanqiuTingji.App";
     private static readonly Color Accent = Color.FromArgb(0x11, 0x9C, 0x7A);
     private static readonly Color Ink = Color.FromArgb(0x1E, 0x22, 0x35);
     private static readonly Color Grey = Color.FromArgb(0x6B, 0x70, 0x80);
@@ -45,7 +45,7 @@ internal sealed class SetupForm : Form
     {
         SuspendLayout();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        Text = L.T("安装 会译");
+        Text = L.T("安装 三秋听记");
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         Font = new Font("Microsoft YaHei UI", 9.5f);
         BackColor = Color.White;
@@ -90,7 +90,7 @@ internal sealed class SetupForm : Form
         };
         var title = new Label
         {
-            Text = L.T("安装 会译"), Font = new Font(Font.FontFamily, 16f, FontStyle.Bold), ForeColor = Ink,
+            Text = L.T("安装 三秋听记"), Font = new Font(Font.FontFamily, 16f, FontStyle.Bold), ForeColor = Ink,
             AutoSize = true, Margin = new Padding(0, 0, 12, 0),
         };
         var versionLabel = new Label
@@ -101,7 +101,7 @@ internal sealed class SetupForm : Form
         titleRow.Controls.AddRange([title, versionLabel]);
         var subtitle = new Label
         {
-            Text = L.T("Windows 上的 AI 会议助手：实时字幕与翻译、AI 纪要、同声传译"),
+            Text = L.T("Windows 上的 AI 会议助手：本地离线转写、发言人区分、智能纪要"),
             ForeColor = Grey, AutoSize = true, Dock = DockStyle.Top, Margin = new Padding(0, 8, 0, 0),
             MaximumSize = new Size(432, 0),
         };
@@ -139,7 +139,7 @@ internal sealed class SetupForm : Form
         var help = new Label
         {
             Text = existing != null
-                ? L.T("已经安装在这里，将覆盖安装为这个版本。要换位置，请先在 Windows「设置 › 应用」里卸载会译。")
+                ? L.T("已经安装在这里，将覆盖安装为这个版本。要换位置，请先在 Windows「设置 › 应用」里卸载三秋听记。")
                 : L.T("程序约 300 MB；首次启动还会下载约 260 MB 的识别模型。装在当前用户下，不需要管理员权限，之后会自动更新。"),
             ForeColor = Grey, AutoSize = true, Dock = DockStyle.Top, Margin = new Padding(0, 10, 0, 0),
             MaximumSize = new Size(504, 0),
@@ -213,13 +213,13 @@ internal sealed class SetupForm : Form
 
     private void Browse()
     {
-        using var dialog = new FolderBrowserDialog { Description = L.T("选择安装会译的文件夹"), ShowNewFolderButton = true };
+        using var dialog = new FolderBrowserDialog { Description = L.T("选择安装三秋听记的文件夹"), ShowNewFolderButton = true };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         var chosen = dialog.SelectedPath;
-        // A folder with other things in it gets its own 会译 subfolder, so uninstalling never touches them.
+        // A folder with other things in it gets its own 三秋听记 subfolder, so uninstalling never touches them.
         var name = Path.GetFileName(chosen.TrimEnd('\\'));
         var empty = !Directory.EnumerateFileSystemEntries(chosen).Any();
-        pathBox.Text = empty || name.Equals("HuiYi", StringComparison.OrdinalIgnoreCase) ? chosen : Path.Combine(chosen, "HuiYi");
+        pathBox.Text = empty || name.Equals("SanqiuTingji", StringComparison.OrdinalIgnoreCase) ? chosen : Path.Combine(chosen, "SanqiuTingji");
     }
 
     /// Can we write there without administrator rights? (Program Files can't: nor could updates later.)
@@ -228,7 +228,7 @@ internal sealed class SetupForm : Form
         try
         {
             Directory.CreateDirectory(dir);
-            var probe = Path.Combine(dir, ".huiyi-write-test");
+            var probe = Path.Combine(dir, ".sanqiutingji-write-test");
             File.WriteAllText(probe, "");
             File.Delete(probe);
             return true;
@@ -244,20 +244,20 @@ internal sealed class SetupForm : Form
         var dir = pathBox.Text.Trim();
         if (dir.Length == 0 || !Path.IsPathRooted(dir))
         {
-            MessageBox.Show(this, L.T("请选择一个完整的文件夹路径，例如 D:\\Apps\\HuiYi。"), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, L.T("请选择一个完整的文件夹路径，例如 D:\\Apps\\SanqiuTingji。"), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
         dir = Path.GetFullPath(dir);
         if (!Writable(dir))
         {
-            MessageBox.Show(this, L.T("没有权限写入这个文件夹（例如 Program Files 需要管理员权限，以后自动更新也会写不进去）。\n\n请换一个位置，例如 D:\\Apps\\HuiYi。"),
+            MessageBox.Show(this, L.T("没有权限写入这个文件夹（例如 Program Files 需要管理员权限，以后自动更新也会写不进去）。\n\n请换一个位置，例如 D:\\Apps\\SanqiuTingji。"),
                 Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
-        var running = Process.GetProcessesByName("HuiYi");
+        var running = Process.GetProcessesByName("SanqiuTingji");
         if (running.Length > 0)
         {
-            if (MessageBox.Show(this, "会译正在运行，安装前需要先关闭它（正在记录的会议会被中断）。\n\n现在关闭并继续吗？", Text,
+            if (MessageBox.Show(this, "三秋听记正在运行，安装前需要先关闭它（正在记录的会议会被中断）。\n\n现在关闭并继续吗？", Text,
                     MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
             foreach (var p in running)
             {
@@ -278,8 +278,8 @@ internal sealed class SetupForm : Form
             browseBtn.Enabled = pathBox.Enabled = existing == null;
             return;
         }
-        statusLabel.Text = L.T("安装完成，正在打开会译…");
-        var app = Path.Combine(dir, "current", "HuiYi.exe");
+        statusLabel.Text = L.T("安装完成，正在打开三秋听记…");
+        var app = Path.Combine(dir, "current", "SanqiuTingji.exe");
         try { if (File.Exists(app)) Process.Start(new ProcessStartInfo(app) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(app) }); }
         catch { }
         await Task.Delay(1200);
@@ -288,7 +288,7 @@ internal sealed class SetupForm : Form
 
     private static (bool Ok, string Error) RunVelopack(string dir)
     {
-        var temp = Path.Combine(Path.GetTempPath(), "HuiYi-setup-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+        var temp = Path.Combine(Path.GetTempPath(), "SanqiuTingji-setup-" + Guid.NewGuid().ToString("N").Substring(0, 8));
         try
         {
             using var payload = Assembly.GetExecutingAssembly().GetManifestResourceStream("VelopackSetup.exe");

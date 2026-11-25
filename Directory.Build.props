@@ -3,6 +3,6 @@
     <!-- Run on whatever newer .NET the machine has; releases are self-contained anyway. -->
     <RollForward>Major</RollForward>
     <LangVersion>latest</LangVersion>
-    <Authors>HuiYi contributors</Authors>
+    <Authors>三秋听记</Authors>
   </PropertyGroup>
 </Project>

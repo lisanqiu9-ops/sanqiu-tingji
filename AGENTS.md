@@ -1,34 +1,34 @@
 # AGENTS.md
 
-会译 (HuiYi): a Windows tray app that turns what the PC plays into live translated subtitles and meeting notes, keeps each meeting as a bilingual record, and speaks what you say back into the room in their language. It follows the macOS app Cicada (Apache-2.0); see NOTICE for what was ported.
+三秋听记 (SanqiuTingji): an independently maintained Windows desktop meeting assistant (derived from HuiYi / Cicada, Apache-2.0; see NOTICE). It turns what the PC plays and microphone input into live transcripts, optional translations, and AI meeting notes.
 
 ## Hard rules
 
-- API keys live only in `%APPDATA%\HuiYi\keys\<service id>.key`, DPAPI-encrypted (`AIKey`): never in settings, logs or exports.
-- Every AI call goes through `AiClient` (start gate, priorities, the platform's own thinking switch from `ProviderPreset`, content in the system message). Services are OpenAI-compatible; platforms are presets in `Providers.cs`, never special cases elsewhere. Partial (draft) text goes to the free translator chosen in 翻译源 (`MachineTranslators`; auto tries them fastest first and rests one that fails), or to the AI only when the user picks AI 大模型 there; at most once a second, one at a time.
-- Never speak untranslated text into the room (`TranslationService.LooksTranslated`). Never bundle VB-CABLE or the models; models are downloaded and checked against pinned SHA-256 (`ModelStore`).
+- API keys live only in `%APPDATA%\SanqiuTingji\keys\<service id>.key`, DPAPI-encrypted (`AIKey`): never in settings, logs or exports.
+- Every AI call goes through `AiClient` (start gate, priorities, the platform's own thinking switch from `ProviderPreset`, content in the system message). Services are OpenAI-compatible; platforms are presets in `Providers.cs`, never special cases elsewhere.
+- Never bundle speech models; models are downloaded and checked against pinned SHA-256 (`ModelStore`).
 - The live panel (实时面板) and the floating subtitles (悬浮字幕) never take focus (`WS_EX_NOACTIVATE`) and stay out of captures (`WDA_EXCLUDEFROMCAPTURE`) unless the user turns on 在屏幕共享和录屏中显示字幕窗口 (then they show 共享中可见).
-- Engines in `HuiYi.Core` are UI-free and raise events on worker threads; `AppModel` hops to the UI thread.
+- Engines in `SanqiuTingji.Core` are UI-free and raise events on worker threads; `AppModel` hops to the UI thread.
 - `session.json` stays compatible with Cicada's format (camelCase, ISO-8601 UTC dates without fractions).
 - The debug log never holds transcript text, translations or the key.
 
 ## Design
 
-会译 has its own look, deliberately unlike Cicada's: cool slate ground `#F5F6FA`, ink `#1E2235`, indigo `#4F5BD5` for actions and selection, green `#22B07D` for "on air", greys `#646B80` / `#9AA1B2`. The live panel is dark (`#1B1E2B`); the records window has a white sidebar grouped by day and notes split into cards; settings are tabbed pages; first run is a one-step-per-page wizard; the mark is a speech bubble (`Icons.cs`). Words: 发言人 (not 说话人), 实时面板, 悬浮字幕, 逐字稿, 同声传译. Colours live in `App.xaml` and `Theme.cs`. UI copy uses `HuiYi.Localization.L` and `Localization/Strings*.resx` for Simplified Chinese, Traditional Chinese, English, Japanese and Korean. Use `{local:Loc}` in XAML and `UiText.Set` / `UiText.Bind` for code-created labels so changes apply immediately. Keep copy short. API identifiers, speech preview sentences, AI prompts, transcripts and user-authored names/templates must keep their original values. The product name is `Brand.Name` in `AppModel.cs`.
+三秋听记 uses its own branding (`Brand.Name` in `AppModel.cs`), Win11 acrylic/glass styling (`Native.cs`), and unified motion (`Motion.cs`). Words: 发言人 (not 说话人), 实时面板, 悬浮字幕, 逐字稿. Colours live in `App.xaml` and `Theme.cs`. UI copy uses `SanqiuTingji.Localization.L` and `Localization/Strings*.resx` for Simplified Chinese and English. Use `{local:Loc}` in XAML and `UiText.Set` / `UiText.Bind` for code-created labels so changes apply immediately. Keep copy short. API identifiers, AI prompts, transcripts and user-authored names/templates must keep their original values.
 
 ## Commands
 
 ```powershell
-dotnet build HuiYi.sln
-dotnet test tests/HuiYi.Tests
-dotnet run --project src/HuiYi -- --listen          # or --show main|settings|setup
-dotnet run --project tools/HuiYi.Cli -- loopback <audio file>
+dotnet build SanqiuTingji.sln
+dotnet test tests/SanqiuTingji.Tests
+dotnet run --project src/SanqiuTingji -- --listen          # or --show main|settings|setup
+dotnet run --project tools/SanqiuTingji.Cli -- loopback <audio file>
 powershell -File scripts/package.ps1
 ```
 
 ## Verifying
 
-Run the app and check the behaviour, not just the build. Use `huiyi-cli loopback` with a clip to drive the real capture path, read `%LOCALAPPDATA%\HuiYi\debug.log`. To check the UI without taking over the desktop, run the app with `--snapshot <folder>`: every window renders to PNG off screen (the capture-proof ones too); `--feed <audio>` listens to a file instead of the PC. VB-CABLE, a real meeting and a real voice need a person.
+Run the app and check the behaviour, not just the build. Use `sanqiu-cli loopback` with a clip to drive the real capture path, read `%LOCALAPPDATA%\SanqiuTingji\debug.log`. To check the UI without taking over the desktop, run the app with `--snapshot <folder>`: every window renders to PNG off screen (the capture-proof ones too); `--feed <audio>` listens to a file instead of the PC. VB-CABLE, a real meeting and a real voice need a person.
 
 ## Conventions
 
