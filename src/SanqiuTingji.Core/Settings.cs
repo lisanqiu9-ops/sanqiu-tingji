@@ -45,6 +45,8 @@ public sealed class AppSettings
     /// Automatically check GitHub Releases for newer versions of SanqiuTingji. On by default.
     /// (Replaces legacy DisableAutoUpdate so v1.0.1 users upgrading to v1.0.2 get updates enabled.)
     public bool AutoUpdateEnabled { get; set; } = true;
+    /// Notice ids already read by the user in the bell notification center.
+    public List<string> ReadNoticeIds { get; set; } = [];
     /// Include translated lines when exporting Word/Markdown. Off by default for Chinese-only meetings.
     public bool IncludeTranslationInExport { get; set; }
     /// Optional default folder for exporting meeting minutes and transcripts.

@@ -31,13 +31,49 @@
             </Border.Effect>
             <DockPanel Margin="14,15,10,12">
                 <StackPanel DockPanel.Dock="Top" Margin="4,0,6,10">
-                    <!-- Brand header + compact Settings glass icon button (no duplicate search icon) -->
+                    <!-- Brand header + Notification Bell & Settings glass icon buttons -->
                     <DockPanel Margin="0,0,0,2">
-                        <Button DockPanel.Dock="Right" Style="{StaticResource Btn}" Width="32" Height="32" Padding="0"
-                                WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Center"
-                                ToolTip="{local:Loc Key='设置'}" AutomationProperties.Name="{local:Loc Key='设置'}" Click="Settings_Click">
-                            <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14.5" Foreground="{StaticResource Muted}"/>
-                        </Button>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Grid Margin="0,0,6,0" WindowChrome.IsHitTestVisibleInChrome="True">
+                                <Button x:Name="BellBtn" Style="{StaticResource Btn}" Width="32" Height="32" Padding="0"
+                                        WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Center"
+                                        ToolTip="消息与更新" AutomationProperties.Name="消息与更新" Click="Bell_Click">
+                                    <TextBlock Text="&#xEA8F;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14.5" Foreground="{StaticResource Muted}"/>
+                                </Button>
+                                <Ellipse x:Name="BellDot" Width="8" Height="8" Fill="#FF3B30" Stroke="White" StrokeThickness="1.4"
+                                         HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,3,3,0"
+                                         IsHitTestVisible="False" Visibility="Collapsed"/>
+                                <Popup x:Name="NoticePopup" PlacementTarget="{Binding ElementName=BellBtn}" Placement="Bottom"
+                                       HorizontalOffset="-12" VerticalOffset="8" StaysOpen="False" AllowsTransparency="True"
+                                       PopupAnimation="Fade" Closed="NoticePopup_Closed">
+                                    <Border Width="356" Margin="10,4,14,14" Background="#FAFFFFFF" BorderBrush="#2416284C"
+                                            BorderThickness="1" CornerRadius="16" Padding="15,13">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="26" ShadowDepth="8" Direction="270" Opacity="0.16" Color="#0C1933"/>
+                                        </Border.Effect>
+                                        <StackPanel>
+                                            <DockPanel Margin="0,0,0,10">
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Button x:Name="NoticeCheckBtn" Content="检查更新" Style="{StaticResource GhostBtn}"
+                                                            Foreground="{StaticResource Primary}" FontSize="11.5" Padding="6,2" Click="NoticeCheckUpdate_Click"/>
+                                                    <Button x:Name="NoticeMarkAllBtn" Content="全部已读" Style="{StaticResource GhostBtn}"
+                                                            Foreground="{StaticResource Muted}" FontSize="11.5" Padding="6,2" Margin="2,0,0,0" Click="NoticeMarkAllRead_Click"/>
+                                                </StackPanel>
+                                                <TextBlock Text="消息与更新" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource Ink}" VerticalAlignment="Center"/>
+                                            </DockPanel>
+                                            <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto">
+                                                <StackPanel x:Name="NoticeListHost"/>
+                                            </ScrollViewer>
+                                        </StackPanel>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                            <Button Style="{StaticResource Btn}" Width="32" Height="32" Padding="0"
+                                    WindowChrome.IsHitTestVisibleInChrome="True" VerticalAlignment="Center"
+                                    ToolTip="{local:Loc Key='设置'}" AutomationProperties.Name="{local:Loc Key='设置'}" Click="Settings_Click">
+                                <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14.5" Foreground="{StaticResource Muted}"/>
+                            </Button>
+                        </StackPanel>
                         <Image x:Name="Logo" Width="32" Height="32" Margin="0,0,10,0"/>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock x:Name="AppName" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>

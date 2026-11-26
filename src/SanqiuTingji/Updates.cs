@@ -129,24 +129,26 @@ public sealed class Updates
         }
     }
 
-    /// The "- …" lines of the notes, leaving out the download section and what follows "---" (the
-    /// release page's full commit list); the links at a line's end go, other links keep their text.
+    /// The "- …" lines of the notes, leaving out download/upgrade instructions and what follows "---";
+    /// trailing links go, other links keep their text, and inline markdown backticks/bold markers are stripped.
     internal static List<string> Bullets(string? markdown)
     {
         var outp = new List<string>();
         if (string.IsNullOrWhiteSpace(markdown)) return outp;
         var section = "";
+        static bool SkipSection(string s) =>
+            s is "下载" or "下载安装" or "下载与升级" or "如何更新" or "首次使用提示";
         foreach (var raw in markdown.Split('\n'))
         {
             var line = raw.Trim();
             if (line == "---") break;
             if (line.StartsWith("#")) section = line.TrimStart('#').Trim();
-            else if (line.StartsWith("- ") && section != "下载")
+            else if (line.StartsWith("- ") && !SkipSection(section))
             {
                 var text = System.Text.RegularExpressions.Regex.Replace(line[2..],
                     @"\s*\[[^\]]+\]\([^)]+\)(\s*·\s*\[[^\]]+\]\([^)]+\))*\s*$", "");
                 text = System.Text.RegularExpressions.Regex.Replace(text, @"\[([^\]]+)\]\([^)]+\)", "$1");
-                outp.Add(text.Replace("**", ""));
+                outp.Add(text.Replace("**", "").Replace("`", ""));
             }
         }
         return outp;

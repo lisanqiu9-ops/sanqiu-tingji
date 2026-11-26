@@ -82,11 +82,30 @@ jobs:
 
       - name: Pack
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # No delta packages: with the Chinese title the stub is 三秋听记_ExecutionStub.exe, and the zstd that
-          # vpk runs for deltas can't open non-ASCII paths. Updates download the full package instead.
+          New-Item -ItemType Directory -Force releases | Out-Null
+          # Use ASCII packTitle so Velopack's ExecutionStub path is ASCII-safe for zstd delta patching.
+          # Only download prior releases as delta baseline once the previous tag is >= v1.0.4
+          # (earlier v1.0.1-v1.0.3 packages still contained a Chinese stub filename).
+          $deltaMode = "none"
+          $prevTag = git describe --tags --abbrev=0 "${{ github.ref_name }}^" 2>$null
+          if ($LASTEXITCODE -ne 0) { $prevTag = $null; $global:LASTEXITCODE = 0 }
+          if ($prevTag -and $prevTag -match '^v(\d+)\.(\d+)\.(\d+)$') {
+            $prevVer = [Version]"$($Matches[1]).$($Matches[2]).$($Matches[3])"
+            if ($prevVer -ge [Version]"1.0.4") {
+              vpk download github --repoUrl $env:REPO_URL --token $env:GH_TOKEN --outputDir releases
+              if ($LASTEXITCODE -eq 0) {
+                $deltaMode = "BestSpeed"
+              } else {
+                $global:LASTEXITCODE = 0
+              }
+            }
+          }
+          Write-Host "Velopack delta mode: $deltaMode (previous tag: $prevTag)"
           vpk pack --packId SanqiuTingji.App --packVersion $env:VERSION --packDir publish --mainExe SanqiuTingji.exe `
-            --packTitle "三秋听记" --packAuthors "三秋听记" --icon assets/SanqiuTingji.ico --delta none `
+            --packTitle "SanqiuTingji" --packAuthors "三秋听记" --icon assets/SanqiuTingji.ico --delta $deltaMode `
             --runtime win-x64 --releaseNotes notes-app.md --outputDir releases
           # The installer people download: lets them pick the folder, then runs the Setup.exe above.
           dotnet build installer/SanqiuTingji.Setup.csproj -c Release -p:Version=$env:VERSION `

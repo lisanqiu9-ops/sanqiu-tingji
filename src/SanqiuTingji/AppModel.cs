@@ -32,6 +32,9 @@ public sealed class AppModel
     public Glossary Glossary { get; } = new();
     /// Background media import queue (non-blocking, multi-file, with async audio compression).
     public MediaImportQueue Imports { get; }
+    /// Static read-only notice feed (supports Cloudflare primary domain + GitHub fallback).
+    public NoticeService Notices { get; }
+    private System.Threading.Timer? noticeTimer;
 
     public IReadOnlyList<NoteTemplate> Templates => NoteTemplates.All(MyTemplates);
 
@@ -192,6 +195,7 @@ public sealed class AppModel
     {
         L.SetLanguage(Settings.UiLanguage);
         Imports = new MediaImportQueue(this, ui);
+        Notices = new NoticeService(Settings, () => App.Updates.Version);
         // Recover any unfinalized PCM recordings left behind if the previous run crashed or lost power.
         if (!preview && System.IO.Directory.Exists(Paths.Recordings))
         {
@@ -201,6 +205,12 @@ public sealed class AppModel
                 if (report.RecoveredCount > 0)
                     Ui(() => Toast?.Invoke($"已自动恢复 {report.RecoveredCount} 场异常中断会议的原始录音"));
             });
+        }
+        if (!preview)
+        {
+            // Quietly check announcements 10 s after launch, then every 6 h.
+            noticeTimer = new System.Threading.Timer(_ => _ = RefreshNoticesQuietlyAsync(), null,
+                TimeSpan.FromSeconds(10), TimeSpan.FromHours(6));
         }
         Ai.Provider = Settings.ActiveProvider;
         Ai.Refresh();
@@ -529,8 +539,17 @@ public sealed class AppModel
         StateChanged?.Invoke();
     }
 
+    public async Task RefreshNoticesQuietlyAsync()
+    {
+        var important = await Notices.RefreshAsync().ConfigureAwait(false);
+        // Never interrupt a live meeting with a toast; the bell badge lights up quietly instead.
+        if (important.Count > 0 && !IsListening)
+            Say($"重要通知：{important[0].Title}");
+    }
+
     public void Shutdown()
     {
+        noticeTimer?.Dispose();
         Imports.CancelAll();
         CancelCliNotes();
         if (IsListening) Meeting!.Stop();

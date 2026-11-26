@@ -13,7 +13,7 @@
     <RootNamespace>SanqiuTingji.Setup</RootNamespace>
     <ApplicationIcon>..\assets\SanqiuTingji.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
     <Product>三秋听记</Product>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>

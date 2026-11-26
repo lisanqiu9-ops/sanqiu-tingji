@@ -1,0 +1,13 @@
+[
+  {
+    "id": "2026-11-26-bell-and-delta",
+    "title": "通知中心已上线，后续版本支持轻量增量更新",
+    "body": "主窗口左上角新增「消息与更新」小铃铛，可随时查看新版本与重要公告；同时已启用增量差分打包架构，后续升级只需下载变更部分。",
+    "date": "2026-11-26",
+    "level": "info",
+    "url": "https://github.com/lisanqiu9-ops/sanqiu-tingji/releases/latest",
+    "minVersion": "1.0.0",
+    "maxVersion": "",
+    "expiresAt": "2027-06-30"
+  }
+]

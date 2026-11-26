@@ -75,9 +75,15 @@ public sealed class UpdateWindow : Window
         jump.Inlines.Add(new System.Windows.Documents.Run("  ▷  ") { Foreground = grey });
         jump.Inlines.Add(new System.Windows.Documents.Run($"v{next}") { Foreground = Theme.Primary, FontWeight = FontWeights.Bold });
 
-        notesHost.Margin = new Thickness(0, 10, 0, 0);
+        notesHost.Margin = new Thickness(0, 2, 8, 2);
         notesHost.Children.Add(UiText.Bind(new TextBlock { Text = L.T("正在读取更新内容…"), Foreground = grey, FontSize = 13 }, ("Text", () => L.T("正在读取更新内容…"))));
-        var notes = new ScrollViewer { Content = notesHost, MaxHeight = 220, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        var notes = new ScrollViewer
+        {
+            Content = notesHost,
+            MaxHeight = 260,
+            Margin = new Thickness(0, 12, 0, 0),
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        };
 
         bar = new ProgressBar { Height = 6, Minimum = 0, Maximum = 100, Margin = new Thickness(0, 18, 0, 0), Visibility = Visibility.Collapsed, Foreground = Theme.Primary };
         status = new TextBlock { FontSize = 12, Foreground = grey, Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap };

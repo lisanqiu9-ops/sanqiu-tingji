@@ -33,7 +33,7 @@ Copy-Item "$root\LICENSE", "$root\NOTICE" $out
 New-Item -ItemType Directory -Force $releases | Out-Null
 
 & $vpk pack --packId SanqiuTingji.App --packVersion $version --packDir $out --mainExe SanqiuTingji.exe `
-    --packTitle "三秋听记" --packAuthors "三秋听记" --icon "$root\assets\SanqiuTingji.ico" --delta none --runtime win-x64 `
+    --packTitle "SanqiuTingji" --packAuthors "三秋听记" --icon "$root\assets\SanqiuTingji.ico" --delta BestSpeed --runtime win-x64 `
     --outputDir $releases 2>&1 | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "vpk pack failed" }
 
