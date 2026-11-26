@@ -41,9 +41,11 @@
                 <!-- Bottom Category-aware Import / Export -->
                 <StackPanel DockPanel.Dock="Bottom" Margin="2,10,2,0">
                     <Border Height="1" Background="#1416284C" Margin="0,0,0,10"/>
+                    <Button x:Name="BuiltInBtn" Content="内置行业 / 方言词包…" Style="{StaticResource Btn}"
+                            Foreground="{StaticResource Primary}" BorderBrush="#40007AFF" Background="#14007AFF"
+                            FontSize="12" FontWeight="SemiBold" Padding="8,7" Margin="0,0,0,7" Click="BuiltIn_Click"/>
                     <Button x:Name="ImportBtn" Content="↑ 导入词库" Style="{StaticResource Btn}"
-                            Foreground="{StaticResource Primary}" BorderBrush="#40007AFF" Background="#12007AFF"
-                            FontSize="12" FontWeight="SemiBold" Padding="8,7" Click="Import_Click"/>
+                            FontSize="12" Padding="8,7" Click="Import_Click"/>
                     <Button x:Name="ExportBtn" Content="↓ 导出当前分类 / 全部" Style="{StaticResource Btn}"
                             FontSize="12" Padding="8,7" Margin="0,7,0,0" Click="Export_Click"/>
                     <TextBlock x:Name="CountText" Style="{StaticResource Helper}" Margin="2,8,0,0" FontSize="11"/>

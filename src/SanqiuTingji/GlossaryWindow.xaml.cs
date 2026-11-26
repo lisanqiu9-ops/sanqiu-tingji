@@ -637,13 +637,30 @@ public partial class GlossaryWindow : Window
         var terms = model.Glossary.Terms.Where(t => t.Id != current.Id).ToList();
         var edited = FromFields();
         if (edited.Text.Length > 0) terms.Add(edited);
-        var (fixedText, fixes) = new TermFixer(terms).Fix(text);
+        var (fixedText, fixes) = new TermFixer(terms, model.Glossary.DialectTolerance).Fix(text);
         TryResult.Text = fixedText;
         TryFixes.Text = fixes.Count == 0 ? L.T("没有需要改的。")
             : string.Join("；", fixes.Select(f => L.F("{0} → {1}", f.From, f.To)));
     }
 
-    // ── Category-aware Import / Export ──
+    // ── Built-in Packs & Category-aware Import / Export ──
+
+    private void BuiltIn_Click(object sender, RoutedEventArgs e)
+    {
+        if (BuiltInGlossaryWindow.Ask(this, model.Glossary) is not { Count: > 0 } chosen) return;
+        var (added, updated) = BuiltInGlossaries.Import(model.Glossary, chosen);
+        var firstPack = BuiltInGlossaries.All.FirstOrDefault(p => p.Id == chosen[0]);
+        if (firstPack != null && (selectedCategory == AllCategory || chosen.Count == 1))
+            selectedCategory = firstPack.Category;
+        FillGroups();
+        RenderCategories();
+        RenderList();
+        if ((IsNew && TextBox.Text.Trim().Length == 0) || FilteredTerms().All(t => t.Id != current.Id))
+        {
+            if (FilteredTerms().FirstOrDefault() is { } first) Show(first);
+        }
+        SavedText.Text = $"已导入内置词包：新增 {added} 个，更新 {updated} 个";
+    }
 
     private void Import_Click(object sender, RoutedEventArgs e)
     {

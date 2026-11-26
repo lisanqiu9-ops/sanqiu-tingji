@@ -218,6 +218,7 @@ public sealed class AppModel
         // Never auto-call cloud AI mid-meeting: notes are generated on explicit user trigger (or optional end-of-meeting).
         Notes = new NotesEngine(Ai, Store) { Template = TemplateFor, Terms = Glossary, Live = () => false };
         Translator.Terms = Glossary;
+        Glossary.DialectTolerance = Settings.GlossaryDialectTolerance;
         // Groups limited to some templates count only in those meetings: the one being heard now,
         // else (imports, the try-it box) the default template.
         Glossary.CurrentTemplate = () => LiveSessionId is { } live ? TemplateFor(Store.Get(live)).Id : Settings.DefaultTemplateId;

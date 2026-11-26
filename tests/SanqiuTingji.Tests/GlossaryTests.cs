@@ -316,4 +316,87 @@ public class GlossaryTests
             if (File.Exists(groupsFile)) File.Delete(groupsFile);
         }
     }
+
+    [Fact]
+    public void MixedLatinAndChineseTermsCorrectSoundAlikesAndRespectBoundaries()
+    {
+        var g = Make(
+            new GlossaryTerm { Text = "EMS系统" },
+            new GlossaryTerm { Text = "AGC控制" },
+            new GlossaryTerm { Text = "10kV配网" });
+        Assert.Equal("接入EMS系统运行", g.Fix("接入ems喜通运行"));
+        Assert.Equal("投运AGC控制策略", g.Fix("投运agc孔制策略"));
+        Assert.Equal("改造10kV配网线路", g.Fix("改造10kv佩王线路"));
+        // ASCII boundary: "xEMS" must not trigger "EMS系统".
+        Assert.Equal("xems喜通", g.Fix("xems喜通"));
+    }
+
+    [Fact]
+    public void DialectToleranceFixesHenanAndRegionalAccentsWithoutHurtingTwoCharTerms()
+    {
+        var g = Make(
+            new GlossaryTerm { Text = "继电保护" },
+            new GlossaryTerm { Text = "算电协同" },
+            new GlossaryTerm { Text = "柔性调控" },
+            new GlossaryTerm { Text = "网关" });
+        g.DialectTolerance = true;
+        Assert.Equal("检查继电保护装置", g.Fix("检查基电报福装置"));   // f/h shift on 护
+        Assert.Equal("推进算电协同项目", g.Fix("推进酸点雪通项目"));   // ue/ie shift on 协
+        Assert.Equal("负荷柔性调控方案", g.Fix("负荷楼信跳空方案"));   // r/l shift on 柔
+
+        // Two-character terms never use relaxed dialect vowel/consonant shifts.
+        Assert.Equal("网福", g.Fix("网福"));
+
+        g.DialectTolerance = false;
+        Assert.Equal("检查基电报福装置", g.Fix("检查基电报福装置"));
+    }
+
+    [Fact]
+    public void BuiltInPacksImportIdempotentlyAndKeepEverydaySpeechClean()
+    {
+        var file = Path.Combine(Path.GetTempPath(), "sanqiutingji-builtin-" + Guid.NewGuid().ToString("N") + ".json");
+        var groupsFile = Path.Combine(Path.GetDirectoryName(file)!, Path.GetFileNameWithoutExtension(file) + "-groups.json");
+        try
+        {
+            var g = new Glossary(file);
+            Assert.Equal(4, BuiltInGlossaries.All.Count);
+            var (added, updated) = BuiltInGlossaries.Import(g, BuiltInGlossaries.All.Select(p => p.Id));
+            Assert.True(added > 200);
+            Assert.Equal(0, updated);
+            foreach (var p in BuiltInGlossaries.All)
+                Assert.Equal(p.TermCount, BuiltInGlossaries.CountInstalled(g, p));
+
+            // Second import is idempotent.
+            Assert.Equal((0, 0), BuiltInGlossaries.Import(g, BuiltInGlossaries.All.Select(p => p.Id)));
+
+            // Power & Henan dialect corrections work out of the box.
+            Assert.Equal("迎峰度夏期间安排专责盯紧台区线损", g.Fix("迎风度下期间安排专者盯紧太区现损"));
+            Assert.Equal("推进V2G和算电协同试点", g.Fix("推进微兔G和算点协同试点"));
+            Assert.Equal("中不中？搁这儿弄啥嘞，不老少人还不得劲", g.Fix("种不种？哥这儿农啥嘞，不老烧人还不得近"));
+
+            // Everyday Mandarin sentences (including tricky near-homophones) remain untouched.
+            foreach (var s in new[]
+            {
+                "这个问题不重，不用太紧张。",
+                "他得了感冒，得好好休息两天。",
+                "科研报告下周再交，十多个方案紧接着推进。",
+                "他不让我低估这个风险，中了奖大家都很开心。",
+                "我们周一早会先对齐需求，周五前把接口联调跑通。",
+                "这批设备到货后按正常流程核对数量和外观即可。",
+            })
+                Assert.Equal(s, g.Fix(s));
+
+            // ExactOnly survives export and re-import.
+            var exported = g.Export("河南话常用词");
+            Assert.Contains("\texact", exported);
+            var g2 = Make();
+            g2.Import(exported);
+            Assert.True(g2.FindByText("可中")?.ExactOnly);
+        }
+        finally
+        {
+            if (File.Exists(file)) File.Delete(file);
+            if (File.Exists(groupsFile)) File.Delete(groupsFile);
+        }
+    }
 }

@@ -1,0 +1,104 @@
+# 三秋听记内置词包：电力系统与电网调度（精选高频易错专业术语）
+# 格式：正确写法<TAB>常被听成<TAB>译法<TAB>说明<TAB>分组[<TAB>exact]
+# ── 电网调度与运行控制 ──
+迎峰度夏	迎风度夏|迎峰度下	peak summer power supply	电网夏季用电高峰期保供工作	电力系统
+迎峰度冬	迎风度冬|迎峰度东	peak winter power supply	电网冬季用电高峰期保供工作	电力系统
+迎峰度夏度冬	迎风度夏度冬|迎峰度下肚东		电网冬夏两季高峰负荷保供	电力系统
+潮流计算	潮汐计算|朝流计算|超流计算	power flow calculation	电网各节点电压与功率分布计算	电力系统
+有功功率	有功公率|有攻功率	active power	实际做功的电功率	电力系统
+无功功率	无功公率|五功功率	reactive power	维持交变电磁场所需的功率	电力系统
+无功补偿	无功补尝|五功补偿	reactive power compensation	提高功率因数、稳定电网电压	电力系统
+电压合格率	电亚合格率	voltage qualification rate	电网电压在规定范围内的时间占比	电力系统
+一次调频	一次调平|一词调频	primary frequency regulation	机组调速器自动响应频率偏差	电力系统
+二次调频	二次调平|二词调频	secondary frequency regulation	由AGC系统实现的电网频率控制	电力系统
+自动发电控制	自动发店控制	AGC	Automatic Generation Control	电力系统
+自动电压控制	自动电亚控制	AVC	Automatic Voltage Control	电力系统
+经济调度	经际调度	economic dispatch	满足安全约束下总发电成本最小	电力系统
+黑启动	黑起动	black start	全网停电后不依赖外部电源自启动	电力系统
+孤岛效应	孤岛效映|姑岛效应	islanding effect	分布式电源脱离大网仍向局部供电	电力系统
+合环操作	和环操作|河环操作	loop closing operation	电网不同支路并列成环网运行	电力系统
+倒闸操作	到闸操作|道闸操作	switching operation	改变电气设备运行状态的开关操作	电力系统
+断面越限	断免越限|断面跃限	transmission section limit violation	输电断面潮流超过安全稳定限额	电力系统
+静态安全分析	静太安全分析	static security analysis	检查N-1开断后电网是否过载越限	电力系统
+状态估计	状太估计	state estimation	根据遥测数据估计电网实时运行状态	电力系统
+负荷预测	负何预测|富荷预测	load forecasting	预测未来电网用电负荷曲线	电力系统
+母线负荷预测	木线负荷预测	bus load forecasting	针对变电站母线的精细化负荷预测	电力系统
+负荷监测	负何监测|复合监测	load monitoring	对用电或台区负荷进行实时监测	电力系统
+安全稳定控制	安全稳腚控制	security and stability control	电网故障后的切机切负荷稳控措施	电力系统
+拉闸限电	拉炸限电	load shedding	电力供应不足时采取的有序限电措施	电力系统
+有序用电	有叙用电|友序用电	orderly power consumption	按预案错峰避峰用电管理	电力系统
+
+# ── 变电、配网与设备术语 ──
+配电网	配电王|佩电网	distribution network	中低压配电网络	电力系统
+配电自动化	佩电自动化	distribution automation	配电网实时监控与故障自愈系统	电力系统
+馈线自动化	会线自动化|溃线自动化	feeder automation	配电线路故障定位、隔离与非故障区恢复	电力系统
+台区	太区|抬区	distribution transformer area	单台配电变压器供电的供电区域	电力系统	exact
+台区线损	太区线损|台区现损|太区现损	transformer area line loss	台区供电量与售电量的差值损耗	电力系统
+线损	现损|限损|县损	line loss	电网传输与配电过程中的电能损耗	电力系统	exact
+同期线损	同奇线损|统期线损	concurrent line loss	同一时间口径下的供售电量线损统计	电力系统
+线损率	现损率|限损率	line loss rate	线损电量占供电量的百分比	电力系统
+容载比	溶载比|荣载比	capacity-to-load ratio	变电站主变总容量与最高负荷的比值	电力系统
+供电可靠性	供店可靠性	power supply reliability	配网持续不间断供电能力指标	电力系统
+电压互感器	电亚互感器|电压胡感器	PT; potential transformer	将高电压按比例变换为标准低电压测量	电力系统
+电流互感器	电刘互感器|电流胡感器	CT; current transformer	将大电流按比例变换为标准小电流测量	电力系统
+继电保护	机电保护|寄电保护|机点保护	relay protection	电网故障时快速切除故障设备的保护系统	电力系统
+差动保护	插动保护|茶动保护	differential protection	比较被保护设备两端电流差值的保护	电力系统
+零序保护	零叙保护|灵序保护	zero-sequence protection	检测接地故障零序分量的保护	电力系统
+备自投	背自投|备自头	BZT; automatic bus transfer	备用电源自动投入装置	电力系统
+重合闸	重和闸|从合闸	auto-reclosing	线路故障跳闸后自动重新合闸尝试	电力系统
+有载调压	有在调压|有载掉压	OLTC; on-load tap changing	带负荷状态下调节变压器分接头调压	电力系统
+分接头	分街头|分接投	tap changer	变压器调节变比的绕组抽头	电力系统
+消弧线圈	销弧线圈|小弧线圈	arc suppression coil	中性点经消弧线圈接地抑制电弧电流	电力系统
+断路器	段路器|断路气	circuit breaker	具备灭弧能力的高低压开关设备	电力系统
+隔离开关	格离开关|哥离开关	disconnector	无灭弧能力、用于形成明显断开点的开关	电力系统
+避雷器	闭雷器|比雷器	surge arrester	限制雷电过电压和操作过电压的保护设备	电力系统
+阻波器	组波器|祖波器	line trap	高频通道阻波设备	电力系统
+电能质量	电嫩质量	power quality	电压偏差、频率偏差、谐波、闪变等指标	电力系统
+谐波治理	斜波治理|鞋波治理	harmonic mitigation	抑制电网高次谐波畸变	电力系统
+电力看价	电力砍价|电力看家		能源大数据场景及分析指标	电力系统
+负荷率	负何率|复合率	load factor	平均负荷与最大负荷的比值	电力系统
+峰谷差	风谷差|峰古差	peak-valley difference	日最高负荷与最低负荷的差值	电力系统
+需量电费	需亮电费|虚量电费	demand charge	按最大需量计收的基本电费	电力系统
+力调电费	立调电费|理调电费	power factor adjustment fee	按功率因数考核奖惩的电费	电力系统
+分时电价	分石电价|分时店价	time-of-use tariff	按峰平谷时段执行不同电价	电力系统
+尖峰电价	尖风电价	critical peak pricing	高峰时段上浮执行的电价机制	电力系统
+两部制电价	两步制电价	two-part tariff	基本电费加电度电费的电价制度	电力系统
+业扩报装	夜扩报装|业括报装	new service connection	电力客户新装、增容用电业务办理	电力系统
+专变采集终端	专变采及终端	dedicated transformer terminal	采集专变用户电能量与负荷数据的终端	电力系统
+负控终端	富控终端|付控终端	load control terminal	电力负荷管理与控制终端	电力系统
+台区智能融合终端	台区智能融和终端	smart distribution terminal	配电台区边端融合采集与控制装置	电力系统
+
+# ── 组织机构与岗位 ──
+专责	专者|转责|专泽	specialist; coordinator	电网企业专业管理岗位	电力系统	exact
+调度控制中心	调度空制中心	dispatch and control center	电网调度运行管理机构	电力系统
+调控中心	掉控中心|调空中心	dispatch and control center	电网调度与监控一体化机构	电力系统
+运检部	运减部|云检部	operation and maintenance dept	电网设备运行检修管理部门	电力系统
+营销部	迎销部	marketing department	电网供电营业与客户服务部门	电力系统
+经研院	京研院|精研院	economic research institute	电网经济技术研究院	电力系统
+电科院	店科院|电科员	electric power research institute	电力科学研究院	电力系统
+电力科学研究院	电力科研院	EPRI	省级或国家级电力科研检测机构	电力系统
+国网	果网		国家电网公司	电力系统	exact
+南网	难网		中国南方电网	电力系统	exact
+网省公司	往省公司	grid provincial company	国家电网/南网及省级电力公司	电力系统
+
+# ── 核心英文缩写与协议 ──
+SCADA	斯卡达|死卡达|SCDA	SCADA	数据采集与监控系统	电力系统
+EMS	一MS|EM死	EMS	能量管理系统	电力系统
+EMS系统	ems喜通|EMS洗通	EMS system	能量管理系统	电力系统
+DMS	DM死	DMS	配电管理系统	电力系统
+PMU	PM优	PMU	同步相量测量单元	电力系统
+WAMS	WAM死	WAMS	广域测量系统	电力系统
+AGC	A继C|A机C|AG西	AGC	自动发电控制	电力系统
+AGC控制	agc空值|AGC孔制	AGC control	自动发电控制策略	电力系统
+AVC	A微C|AV西	AVC	自动电压控制	电力系统
+AVC控制	avc空值|AVC孔制	AVC control	自动电压控制策略	电力系统
+SVG	S微G|S维G|SV机	SVG	静止无功发生器	电力系统
+SVC	S微C|SV西	SVC	静止无功补偿器	电力系统
+GIS	G艾S|GI死|G爱S	GIS	气体绝缘全封闭组合电器/地理信息系统	电力系统
+DTU	DT优	DTU	站所终端	电力系统
+FTU	FT优	FTU	馈线终端	电力系统
+TTU	TT优	TTU	配变监测终端	电力系统
+HPLC	HPL西	HPLC	高速电力线载波通信	电力系统
+IEC 61850	IEC61850|61850规约	IEC 61850	变电站通信网络与系统标准	电力系统
+DL/T 645	645规约|DLT645	DL/T 645	多功能电能表通信协议	电力系统
+Modbus	莫德巴斯|魔德巴斯|mod bus	Modbus	工业/电力常用串行与TCP通信协议	电力系统

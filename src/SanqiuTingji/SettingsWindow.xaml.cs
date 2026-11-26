@@ -41,6 +41,7 @@ public partial class SettingsWindow : Window
         RedoOn.IsChecked = s.RedoSpeakers;
         SaveAudioOn.IsChecked = s.SaveMeetingAudio;
         GlossaryOn.IsChecked = s.GlossaryOn;
+        GlossaryDialectOn.IsChecked = s.GlossaryDialectTolerance;
         UiText.Set(GlossaryHelp, "Text", () => L.F("词库里有 {0} 个词条。人名、产品名、术语被认错时会自动改对，纪要也会按词库的写法来。", model.Glossary.Terms.Count));
         model.Glossary.Changed += () => Dispatcher.BeginInvoke(() => UiText.Set(GlossaryHelp, "Text", () => L.F("词库里有 {0} 个词条。人名、产品名、术语被认错时会自动改对，纪要也会按词库的写法来。", model.Glossary.Terms.Count)));
         Capturable.IsChecked = s.HideFromCaptures;
@@ -128,6 +129,8 @@ public partial class SettingsWindow : Window
         s.RedoSpeakers = RedoOn.IsChecked == true;
         s.SaveMeetingAudio = SaveAudioOn.IsChecked == true;
         s.GlossaryOn = GlossaryOn.IsChecked == true;
+        s.GlossaryDialectTolerance = GlossaryDialectOn.IsChecked == true;
+        model.Glossary.DialectTolerance = s.GlossaryDialectTolerance;
         s.HideFromCaptures = Capturable.IsChecked == true;
         if (TagOf(TemplateDefaultBox) is { Length: > 0 } tid) s.DefaultTemplateId = tid;
         s.ListenMicId = TagOf(ListenMicBox) is { Length: > 0 } room ? room : null;

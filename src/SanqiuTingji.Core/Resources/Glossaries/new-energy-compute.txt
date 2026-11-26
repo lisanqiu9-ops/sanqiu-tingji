@@ -1,0 +1,67 @@
+# 三秋听记内置词包：新能源、储能与算电协同
+# 格式：正确写法<TAB>常被听成<TAB>译法<TAB>说明<TAB>分组[<TAB>exact]
+# ── 负荷柔性调控与车网互动 ──
+负荷柔性调控	负荷揉性调控|负何柔性调控	flexible load control	对充电桩、空调、储能等负荷弹性调节	新能源与算电协同
+柔性调控	揉性调控|肉性调控	flexible control	不硬性拉闸、按激励或策略平滑调节负荷	新能源与算电协同
+有序充电	有叙充电|友序充电	orderly charging	错峰引导电动汽车在电网低谷或绿电富余时段充电	新能源与算电协同
+车网互动	车王互动|彻网互动	V2G; vehicle-to-grid	电动汽车与电网双向能量与信息互动	新能源与算电协同
+V2G	微2G|微兔G|V2机|V兔G	V2G	Vehicle-to-Grid 车网双向互动	新能源与算电协同
+V2G桩	微2G桩|V2机桩	V2G charger	支持反向向电网放电的充电桩	新能源与算电协同
+重卡充电站	重卡充点站|众卡充电站	heavy-duty truck charging station	面向电动重卡的大功率充电场站	新能源与算电协同
+大功率充电	大功绿充电	high-power charging	液冷超充、兆瓦级重卡快充等场景	新能源与算电协同
+兆瓦级超充	照瓦级超充|兆瓦极超充	megawatt charging	单枪或群充达到MW级的充电设施	新能源与算电协同
+光储充一体化	光楚充一体化|光除充一体化	PV-storage-charging integration	光伏+储能+充电桩协同微网场站	新能源与算电协同
+需求侧响应	需球侧响应|需求测响应	demand response	用户侧按电价或激励信号调整用电负荷	新能源与算电协同
+需求侧管理	需求测管理	DSM; demand-side management	用户侧能效提升与负荷调节管理	新能源与算电协同
+可调节负荷	可掉节负荷	adjustable load	具备上调或下调潜力的柔性用电负荷	新能源与算电协同
+可中断负荷	可中端负荷	interruptible load	电网紧缺时按协议可短时切除的负荷	新能源与算电协同
+虚拟电厂	须拟电厂|虚拟店厂	VPP; virtual power plant	聚合分布式电源、储能、可调负荷参与电网运行	新能源与算电协同
+VPP	微PP|VP批	VPP	Virtual Power Plant 虚拟电厂	新能源与算电协同
+负荷聚合商	负荷聚和商|负何聚合商	load aggregator	整合分散负荷资源参与市场交易的主体	新能源与算电协同
+微电网	为电网|微店网	microgrid	可并网也可离网自治运行的小型发配用系统	新能源与算电协同
+台区柔性互联	台区揉性互联	flexible interconnection of transformer areas	通过电力电子装置实现相邻台区互济	新能源与算电协同
+源网荷储	原网荷储|元网荷储|源网和储	source-grid-load-storage	电源、电网、负荷、储能一体化协同	新能源与算电协同
+源网荷储一体化	原网荷储一体化	integrated source-grid-load-storage	多能互补与就近消纳运行模式	新能源与算电协同
+
+# ── 绿电感知与双碳 ──
+绿电感知	滤电感知|律电感知	green power perception	识别与追踪用户侧绿色电力使用情况	新能源与算电协同
+绿电溯源	滤电溯源|绿电诉源	green power traceability	全链路溯源绿电发输配用去向	新能源与算电协同
+绿电直连	滤电直连|绿电直联	direct green power supply	新能源电源点对点向负荷直供绿电	新能源与算电协同
+绿证	滤证|绿正	GEC; green electricity certificate	可再生能源绿色电力证书	新能源与算电协同	exact
+绿证交易	滤证交易|律政交易	green certificate trading	绿色电力证书市场化买卖	新能源与算电协同
+绿电交易	滤电交易|律电交易	green power trading	中长期或现货市场绿色电力交易	新能源与算电协同
+碳排放因子	谈排放因子|炭排放因子	carbon emission factor	单位电量对应的二氧化碳排放系数	新能源与算电协同
+碳足迹	炭足迹|谈足迹	carbon footprint	产品或算力中心全周期碳排放核算	新能源与算电协同
+
+# ── 储能、光伏与电力市场 ──
+电化学储能	电华学储能	electrochemical energy storage	锂离子、钠离子、液流电池等储能	新能源与算电协同
+抽水蓄能	抽水序能|抽水续能	pumped hydro storage	利用水库高差调峰填谷的储能电站	新能源与算电协同
+构网型储能	够网型储能|购网型储能	grid-forming energy storage	主动构建电压频率支撑的储能变流器	新能源与算电协同
+跟网型储能	根网型储能|更网型储能	grid-following energy storage	锁相跟踪电网电压频率运行的储能	新能源与算电协同
+全钒液流	全凡液流|全烦液流	all-vanadium flow battery	长时安全电化学储能路线	新能源与算电协同
+磷酸铁锂	林酸铁锂|淋酸铁锂	LFP; lithium iron phosphate	主流电化学储能与动力电池材料	新能源与算电协同
+储能变流器	储能变刘器	PCS; power conversion system	连接电池组与交流电网的双向逆变器	新能源与算电协同
+BMS	BM死|B艾姆S	BMS	电池管理系统	新能源与算电协同
+PCS	PC死|P西S	PCS	储能变流器	新能源与算电协同
+SOC	SO西|S欧C	SOC	State of Charge 电池荷电状态	新能源与算电协同
+SOH	SOH	SOH	State of Health 电池健康状态	新能源与算电协同
+电力现货市场	电力现活市场	electricity spot market	日前、日内、实时电能与辅助服务交易	新能源与算电协同
+日前市场	日钱市场	day-ahead market	提前一天出清的电力现货市场	新能源与算电协同
+出清电价	初清电价|出轻电价	clearing price	电力市场集中竞价形成的成交价格	新能源与算电协同
+节点边际电价	节点边计电价	LMP; locational marginal pricing	反映阻塞与网损的节点现货价格	新能源与算电协同
+辅助服务	扶助服务|辅主服务	ancillary services	调频、调峰、备用、黑启动等系统服务	新能源与算电协同
+容量电价	溶量电价	capacity tariff	按可用发电或调节容量补偿的电价机制	新能源与算电协同
+弃风率	气风率|器风率	wind curtailment rate	未能消纳的弃风电量占比	新能源与算电协同
+弃光率	气光率|器光率	solar curtailment rate	未能消纳的弃光电量占比	新能源与算电协同
+消纳率	销纳率|小纳率	renewable integration rate	新能源实际消纳电量占可发电量比例	新能源与算电协同
+爬坡率	帕坡率	ramp rate	机组或负荷单位时间内功率变化速率	新能源与算电协同
+防孤岛保护	放孤岛保护|防姑岛保护	anti-islanding protection	电网失电时迅速断开分布式电源的保护	新能源与算电协同
+
+# ── 算电协同与智算中心 ──
+算电协同	算点协同|蒜电协同|算店协同	computing-power synergy	算力调度与电力能源供给协同优化	新能源与算电协同
+东数西算	东树西算|冬数西算	Eastern Data Western Computing	国家算力枢纽与跨区域算电布局工程	新能源与算电协同
+算力调度	算立调度|蒜力调度	computing scheduling	跨区域或跨时段任务算力编排	新能源与算电协同
+智算中心	至算中心|治算中心	AI computing center	高密度GPU算力集群数据中心	新能源与算电协同
+液冷数据中心	夜冷数据中心|叶冷数据中心	liquid-cooled data center	采用冷板或浸没液冷降低PUE的数据中心	新能源与算电协同
+PUE	P优E|批UE|P由E	PUE	数据中心电能利用效率	新能源与算电协同
+绿电算力融合	滤电算力融合	green computing-power integration	绿电消纳与智算负荷耦合运行	新能源与算电协同

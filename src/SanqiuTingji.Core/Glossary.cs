@@ -73,7 +73,23 @@ public sealed class Glossary
     private Dictionary<string, List<string>> scopes = [];
     /// Correctors per template id ("" when none is known), built on first use.
     private readonly Dictionary<string, TermFixer> fixers = [];
+    private bool dialectTolerance = true;
     public event Action? Changed;
+
+    /// Whether TermFixer allows dialect / accent pronunciation shifts on 3+ character terms.
+    public bool DialectTolerance
+    {
+        get { lock (gate) return dialectTolerance; }
+        set
+        {
+            lock (gate)
+            {
+                if (dialectTolerance == value) return;
+                dialectTolerance = value;
+                fixers.Clear();
+            }
+        }
+    }
 
     /// The template of the meeting being heard now (the app sets it); groups limited to other
     /// templates stay out of corrections, translations and notes.
@@ -223,7 +239,7 @@ public sealed class Glossary
         lock (gate)
         {
             var key = template ?? "";
-            if (!fixers.TryGetValue(key, out var f)) fixers[key] = f = new TermFixer(terms.Where(t => Active(t, template)));
+            if (!fixers.TryGetValue(key, out var f)) fixers[key] = f = new TermFixer(terms.Where(t => Active(t, template)), dialectTolerance);
             return f;
         }
     }
@@ -419,8 +435,11 @@ public sealed class Glossary
         sb.AppendLine("# 三秋听记词库：正确写法<TAB>常被听成（| 分隔）<TAB>译法（gateway; ja=ゲートウェイ）<TAB>说明<TAB>分组");
         lock (gate)
             foreach (var t in terms.Where(t => onlyGroup == null || t.Group == onlyGroup))
-                sb.AppendLine(string.Join('\t', t.Text, string.Join('|', t.Misheard), GlossaryTerm.FormatTranslations(t.Translations),
-                    t.Note.Replace('\t', ' ').Replace('\n', ' '), t.Group));
+                sb.AppendLine(t.ExactOnly
+                    ? string.Join('\t', t.Text, string.Join('|', t.Misheard), GlossaryTerm.FormatTranslations(t.Translations),
+                        t.Note.Replace('\t', ' ').Replace('\n', ' '), t.Group, "exact")
+                    : string.Join('\t', t.Text, string.Join('|', t.Misheard), GlossaryTerm.FormatTranslations(t.Translations),
+                        t.Note.Replace('\t', ' ').Replace('\n', ' '), t.Group));
         return sb.ToString();
     }
 
@@ -445,10 +464,11 @@ public sealed class Glossary
                 var tr = cols.Length > 2 ? GlossaryTerm.ParseTranslations(cols[2]) : [];
                 var note = cols.Length > 3 ? cols[3].Trim() : "";
                 var group = cols.Length > 4 && cols[4].Trim().Length > 0 ? cols[4].Trim() : defaultGroup;
+                var exactOnly = cols.Length > 5 && cols[5].Trim().Equals("exact", StringComparison.OrdinalIgnoreCase);
                 var known = terms.FirstOrDefault(t => t.Text == spelling);
                 if (known == null)
                 {
-                    terms.Add(new GlossaryTerm { Text = spelling, Misheard = misheard.Where(m => m != spelling).ToList(), Translations = tr, Note = note, Group = group });
+                    terms.Add(new GlossaryTerm { Text = spelling, Misheard = misheard.Where(m => m != spelling).ToList(), Translations = tr, Note = note, Group = group, ExactOnly = exactOnly });
                     if (group.Length > 0 && !scopes.ContainsKey(group)) scopes[group] = [];
                     added++;
                     continue;
@@ -473,36 +493,120 @@ public sealed record TermFix(string From, string To, int At);
 
 /// Corrects recognized text against the glossary, in one pass so a correction is never corrected
 /// again: first the misheard spellings the user listed (and, for Latin words, any letter case),
-/// then Chinese sound-alikes — a run of characters read like a term but written otherwise. Two-
-/// character terms must sound exactly the same (tones aside); longer ones may differ the way
-/// speakers and recognizers blur Mandarin (z/zh, c/ch, s/sh, n/l, -n/-ng).
+/// then sound-alikes — Chinese terms or Chinese-Latin mixed terms (e.g. "EMS系统") read like a
+/// term but written otherwise. Two-character terms must sound exactly the same (tones aside);
+/// longer ones may differ by Mandarin blurs (z/zh, c/ch, s/sh, n/l, -n/-ng) and, when
+/// `dialectTolerance` is enabled, a bounded number of dialect/accent shifts (e.g. Henan uo/e, f/h,
+/// r/l, ui/ei, ue/ie, ao/ou, ong/en).
 public sealed class TermFixer
 {
-    private sealed record Rule(string From, string To);
-    private readonly List<Rule> exact;          // longest first
-    private readonly List<(string Text, string[][] Sounds, bool Loose)> alike;   // longest first
+    private sealed record Rule(string From, string To, bool Latin);
+    private sealed record Slot(bool IsHan, string[] Sounds, char LowerAscii);
+    private sealed record AlikeRule(
+        string Text,
+        Slot[] Slots,
+        bool AllHan,
+        bool Loose,
+        int MaxDialectShifts,
+        bool StartsWithAscii,
+        bool EndsWithAscii);
 
-    public TermFixer(IEnumerable<GlossaryTerm> terms)
+    private readonly Dictionary<char, List<Rule>> exactByFirst = [];
+    private readonly List<AlikeRule> hanAlike = [];
+    private readonly Dictionary<string, List<AlikeRule>> alikeByFirstPinyin = [];
+    private readonly Dictionary<char, List<AlikeRule>> alikeByFirstAscii = [];
+    private readonly HashSet<string> spellings;
+    private readonly bool dialectTolerance;
+    private readonly bool hasRules;
+
+    public TermFixer(IEnumerable<GlossaryTerm> terms, bool dialectTolerance = true)
     {
+        this.dialectTolerance = dialectTolerance;
         var on = terms.Where(t => t.Enabled && t.Text.Trim().Length > 0).ToList();
-        exact = on.SelectMany(t => t.Misheard.Where(m => m.Length > 0 && m != t.Text).Select(m => new Rule(m, t.Text))
+        var exactList = on.SelectMany(t => t.Misheard.Where(m => m.Length > 0 && m != t.Text).Select(m => new Rule(m, t.Text, IsLatin(m)))
                     // A Latin term in another case ("kubernetes", "KUBERNETES") is still that term.
-                    .Concat(IsLatin(t.Text) ? [new Rule(t.Text, t.Text)] : []))
+                    .Concat(IsLatin(t.Text) ? [new Rule(t.Text, t.Text, true)] : []))
             .OrderByDescending(r => r.From.Length).ToList();
-        alike = on.Where(t => !t.ExactOnly && t.Text.Length >= 2 && t.Text.All(Pinyin.IsHan))
-            .Select(t => (t.Text, t.Text.Select(c => Pinyin.Of(c)).ToArray(), t.Text.Length >= 3))
-            .Where(x => x.Item2.All(s => s.Length > 0))
-            .OrderByDescending(x => x.Text.Length).ToList();
+        foreach (var r in exactList)
+        {
+            var key = char.ToLowerInvariant(r.From[0]);
+            if (!exactByFirst.TryGetValue(key, out var bucket)) exactByFirst[key] = bucket = [];
+            bucket.Add(r);
+        }
+
+        var alikeList = new List<AlikeRule>();
+        foreach (var t in on)
+        {
+            if (t.ExactOnly || t.Text.Length < 2) continue;
+            var slots = BuildSlots(t.Text);
+            if (slots == null) continue;
+            var hanCount = slots.Count(s => s.IsHan);
+            if (hanCount < 2) continue;
+            var maxShifts = !dialectTolerance || hanCount < 3 ? 0 : hanCount == 3 ? 1 : Math.Min(2, hanCount / 2);
+            var rule = new AlikeRule(
+                t.Text,
+                slots,
+                hanCount == slots.Length,
+                hanCount >= 3,
+                maxShifts,
+                !slots[0].IsHan,
+                !slots[^1].IsHan);
+            alikeList.Add(rule);
+        }
+        alikeList.Sort((a, b) => b.Text.Length.CompareTo(a.Text.Length));
+        foreach (var rule in alikeList)
+        {
+            if (rule.AllHan) hanAlike.Add(rule);
+            if (!rule.Slots[0].IsHan)
+            {
+                var k = rule.Slots[0].LowerAscii;
+                if (!alikeByFirstAscii.TryGetValue(k, out var bucket)) alikeByFirstAscii[k] = bucket = [];
+                bucket.Add(rule);
+            }
+            else
+            {
+                var keys = rule.Slots[0].Sounds.Select(Pinyin.DialectLoose).Distinct();
+                foreach (var k in keys)
+                {
+                    if (!alikeByFirstPinyin.TryGetValue(k, out var bucket)) alikeByFirstPinyin[k] = bucket = [];
+                    bucket.Add(rule);
+                }
+            }
+        }
+
         spellings = on.Select(t => t.Text).ToHashSet();
+        hasRules = exactList.Count > 0 || alikeList.Count > 0;
     }
 
-    private readonly HashSet<string> spellings;
+    private static Slot[]? BuildSlots(string text)
+    {
+        var slots = new Slot[text.Length];
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (Pinyin.IsHan(c))
+            {
+                var sounds = Pinyin.Of(c);
+                if (sounds.Length == 0) return null;
+                slots[i] = new Slot(true, sounds, '\0');
+            }
+            else if (char.IsAsciiLetterOrDigit(c))
+            {
+                slots[i] = new Slot(false, [], char.ToLowerInvariant(c));
+            }
+            else
+            {
+                return null;
+            }
+        }
+        return slots;
+    }
 
     public static bool IsLatin(string s) => s.Any(char.IsAsciiLetter) && !s.Any(Pinyin.IsHan);
 
     public (string Text, IReadOnlyList<TermFix> Fixes) Fix(string text)
     {
-        if (text.Length == 0 || (exact.Count == 0 && alike.Count == 0)) return (text, []);
+        if (text.Length == 0 || !hasRules) return (text, []);
         var sounds = text.Select(c => Pinyin.IsHan(c) ? Pinyin.Of(c) : []).ToArray();
         var sb = new StringBuilder(text.Length + 8);
         var fixes = new List<TermFix>();
@@ -529,10 +633,11 @@ public sealed class TermFixer
     public IReadOnlyList<(string Heard, string Term)> Suspects(string text)
     {
         var found = new List<(string, string)>();
-        if (alike.Count == 0 || text.Length == 0) return found;
+        if (hanAlike.Count == 0 || text.Length == 0) return found;
         var sounds = text.Select(c => Pinyin.IsHan(c) ? Pinyin.Of(c) : []).ToArray();
-        foreach (var (term, termSounds, _) in alike)
+        foreach (var rule in hanAlike)
         {
+            var term = rule.Text;
             var n = term.Length;
             for (var i = 0; i + n <= text.Length; i++)
             {
@@ -543,8 +648,8 @@ public sealed class TermFixer
                 for (var k = 0; k < n; k++)
                 {
                     if (sounds[i + k].Length == 0) { off = 9; break; }
-                    if (Pinyin.Alike(sounds[i + k], termSounds[k], true)) alikeCount++;
-                    else if (Pinyin.Near(sounds[i + k], termSounds[k])) near++;
+                    if (Pinyin.Alike(sounds[i + k], rule.Slots[k].Sounds, true)) alikeCount++;
+                    else if (Pinyin.Near(sounds[i + k], rule.Slots[k].Sounds)) near++;
                     else off++;
                 }
                 // Every character at least near, and at most one of them only near.
@@ -557,10 +662,11 @@ public sealed class TermFixer
 
     private (int Length, string To)? Exact(string text, int i)
     {
-        foreach (var r in exact)
+        if (!exactByFirst.TryGetValue(char.ToLowerInvariant(text[i]), out var bucket)) return null;
+        foreach (var r in bucket)
         {
             if (i + r.From.Length > text.Length) continue;
-            if (IsLatin(r.From))
+            if (r.Latin)
             {
                 if (string.Compare(text, i, r.From, 0, r.From.Length, StringComparison.OrdinalIgnoreCase) != 0) continue;
                 // Whole words only: "API" inside "rapid" or "APIs" is not the term.
@@ -576,20 +682,97 @@ public sealed class TermFixer
 
     private (int Length, string To)? Alike(string text, string[][] sounds, int i)
     {
-        foreach (var (term, termSounds, loose) in alike)
+        if (char.IsAsciiLetterOrDigit(text[i]))
         {
-            var n = term.Length;
-            if (i + n > text.Length) continue;
-            var window = text.Substring(i, n);
-            if (window == term) return (n, term);
-            // Another term of the user's, written right: leave it.
-            if (spellings.Contains(window)) continue;
-            var ok = true;
-            for (var k = 0; k < n && ok; k++)
-                ok = sounds[i + k].Length > 0 && Pinyin.Alike(sounds[i + k], termSounds[k], loose);
-            if (ok) return (n, term);
+            if (!alikeByFirstAscii.TryGetValue(char.ToLowerInvariant(text[i]), out var asciiBucket)) return null;
+            return BestFromBucket(text, sounds, i, asciiBucket, null);
         }
-        return null;
+        var first = sounds[i];
+        if (first.Length == 0) return null;
+        if (first.Length == 1)
+        {
+            if (!alikeByFirstPinyin.TryGetValue(Pinyin.DialectLoose(first[0]), out var bucket)) return null;
+            return BestFromBucket(text, sounds, i, bucket, null);
+        }
+
+        (int Length, int Tier, string To)? best = null;
+        string? seenKey = null;
+        HashSet<string>? seenKeys = null;
+        foreach (var p in first)
+        {
+            var key = Pinyin.DialectLoose(p);
+            if (seenKey == key) continue;
+            if (seenKey == null) seenKey = key;
+            else
+            {
+                seenKeys ??= [seenKey];
+                if (!seenKeys.Add(key)) continue;
+            }
+            if (!alikeByFirstPinyin.TryGetValue(key, out var bucket)) continue;
+            best = BestCandidate(text, sounds, i, bucket, best);
+        }
+        return best is { } b ? (b.Length, b.To) : null;
+    }
+
+    private (int Length, string To)? BestFromBucket(string text, string[][] sounds, int i, List<AlikeRule> bucket, (int Length, int Tier, string To)? best)
+    {
+        var found = BestCandidate(text, sounds, i, bucket, best);
+        return found is { } b ? (b.Length, b.To) : null;
+    }
+
+    private (int Length, int Tier, string To)? BestCandidate(string text, string[][] sounds, int i, List<AlikeRule> bucket, (int Length, int Tier, string To)? best)
+    {
+        foreach (var rule in bucket)
+        {
+            var n = rule.Text.Length;
+            if (best is { } cur && n < cur.Length) break;   // bucket is sorted longest-first
+            if (i + n > text.Length) continue;
+            if (rule.StartsWithAscii && i > 0 && char.IsAsciiLetterOrDigit(text[i - 1])) continue;
+            var end = i + n;
+            if (rule.EndsWithAscii && end < text.Length && char.IsAsciiLetterOrDigit(text[end])) continue;
+
+            var window = text.Substring(i, n);
+            if (window == rule.Text)
+            {
+                if (best is null || n > best.Value.Length || (n == best.Value.Length && 3 > best.Value.Tier))
+                    best = (n, 3, rule.Text);
+                continue;
+            }
+            // Another pure-Han term of the user's, written right: leave it.
+            if (rule.AllHan && spellings.Contains(window)) continue;
+
+            var tier = MatchSlots(text, sounds, i, rule);
+            if (tier == 0) continue;
+            if (best is null || n > best.Value.Length || (n == best.Value.Length && tier > best.Value.Tier))
+                best = (n, tier, rule.Text);
+        }
+        return best;
+    }
+
+    private int MatchSlots(string text, string[][] sounds, int i, AlikeRule rule)
+    {
+        var dialectShifts = 0;
+        for (var k = 0; k < rule.Slots.Length; k++)
+        {
+            var slot = rule.Slots[k];
+            if (!slot.IsHan)
+            {
+                if (char.ToLowerInvariant(text[i + k]) != slot.LowerAscii) return 0;
+                continue;
+            }
+            if (sounds[i + k].Length == 0) return 0;
+            if (dialectTolerance && rule.MaxDialectShifts > 0)
+            {
+                var level = Pinyin.DialectAlike(sounds[i + k], slot.Sounds);
+                if (level == 0) return 0;
+                if (level == 1 && ++dialectShifts > rule.MaxDialectShifts) return 0;
+            }
+            else if (!Pinyin.Alike(sounds[i + k], slot.Sounds, rule.Loose))
+            {
+                return 0;
+            }
+        }
+        return dialectShifts == 0 ? 2 : 1;
     }
 }
 
@@ -611,6 +794,17 @@ public static class Pinyin
             foreach (var y in b)
                 if (x == y || (loose && Loose(x) == Loose(y))) return true;
         return false;
+    }
+
+    /// 2: standard loose sound match (`Loose`); 1: dialect-tolerant match (`DialectLoose`, e.g.
+    /// Henan uo/e, f/h, r/l, ui/ei, ue/ie, ao/ou, ong/en); 0: no match.
+    public static int DialectAlike(string[] a, string[] b)
+    {
+        if (Alike(a, b, loose: true)) return 2;
+        foreach (var x in a)
+            foreach (var y in b)
+                if (DialectLoose(x) == DialectLoose(y)) return 1;
+        return 0;
     }
 
     private static readonly string[] Initials = ["zh", "ch", "sh", "b", "p", "m", "f", "d", "t", "n", "l", "g", "k", "h", "j", "q", "x", "r", "z", "c", "s", "y", "w"];
@@ -641,6 +835,27 @@ public static class Pinyin
         else if (s.StartsWith('l')) s = "n" + s[1..];
         if (s.EndsWith("ng") && !s.EndsWith("ong")) s = s[..^1];
         return s;
+    }
+
+    /// Extended blur folding for northern / Central Plains (Henan) accents and dialect vowel shifts.
+    public static string DialectLoose(string s)
+    {
+        s = Loose(s);
+        if (s.Length == 0) return s;
+        if (s.StartsWith('r')) s = "n" + s[1..];
+        else if (s.StartsWith('f')) s = "h" + s[1..];
+        var (init, fin) = Split(s);
+        fin = fin switch
+        {
+            "uo" => "e",
+            "ui" => "ei",
+            "ai" => "ei",
+            "ue" or "ve" => "ie",
+            "ao" => "ou",
+            "ong" => "en",
+            _ => fin,
+        };
+        return init + fin;
     }
 
     private static Dictionary<char, string[]> Load()

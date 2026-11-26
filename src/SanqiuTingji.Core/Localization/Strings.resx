@@ -2242,4 +2242,10 @@
   <data name="开会时不实时整理纪要，会议结束后会整理一次（可以在「设置 › AI 服务」里打开）。" xml:space="preserve">
     <value>开会时不实时整理纪要，会议结束后会整理一次（可以在「设置 › AI 服务」里打开）。</value>
   </data>
+  <data name="方言与口音增强纠错（河南话等长词音近容错）" xml:space="preserve">
+    <value>方言与口音增强纠错（河南话等长词音近容错）</value>
+  </data>
+  <data name="3 字及以上词条自动容忍 uo/e、f/h、r/l、ui/ei 等常见方言与口音偏移；2 字词保持严格同音或按误听写法替换。" xml:space="preserve">
+    <value>3 字及以上词条自动容忍 uo/e、f/h、r/l、ui/ei 等常见方言与口音偏移；2 字词保持严格同音或按误听写法替换。</value>
+  </data>
 </root>

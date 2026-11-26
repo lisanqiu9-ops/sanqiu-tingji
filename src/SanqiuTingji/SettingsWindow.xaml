@@ -51,6 +51,8 @@
                                     <CheckBox x:Name="GlossaryOn" DockPanel.Dock="Right" Style="{StaticResource Switch}" Checked="Changed" Unchecked="Changed"/>
                                     <TextBlock Text="{local:Loc Key='识别后按词库纠正'}" VerticalAlignment="Center"/>
                                 </DockPanel>
+                                <CheckBox x:Name="GlossaryDialectOn" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='方言与口音增强纠错（河南话等长词音近容错）'}" Margin="0,10,0,0" Checked="Changed" Unchecked="Changed"/>
+                                <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap" Text="{local:Loc Key='3 字及以上词条自动容忍 uo/e、f/h、r/l、ui/ei 等常见方言与口音偏移；2 字词保持严格同音或按误听写法替换。'}"/>
                                 <TextBlock x:Name="GlossaryHelp" Style="{StaticResource Helper}" TextWrapping="Wrap"/>
                                 <Button Content="{local:Loc Key='打开词库'}" Style="{StaticResource Btn}" HorizontalAlignment="Left" Margin="0,10,0,0" Click="Glossary_Click"/>
                             </StackPanel>

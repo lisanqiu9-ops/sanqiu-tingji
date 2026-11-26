@@ -1,0 +1,43 @@
+# 三秋听记内置词包：招投标与电力数字化工程
+# 格式：正确写法<TAB>常被听成<TAB>译法<TAB>说明<TAB>分组[<TAB>exact]
+# ── 招投标与商务技术文件 ──
+技术规范书	技术归范书|技书规范书	technical specification	招标文件核心技术要求与供货条款	招投标与工程
+供货范围	供货方围|共货范围	scope of supply	投标应答中包含的硬件、软件与服务清单	招投标与工程
+商务偏离	商务偏离表|商务篇离	commercial deviation	投标条款与招标商务条款差异说明	招投标与工程
+技术偏离	技术篇离|技书偏离	technical deviation	投标技术响应与规范书差异说明	招投标与工程
+澄清函	成清函|澄青函	clarification letter	评标或投标阶段发出的书面答疑与澄清	招投标与工程
+中标候选人	重标候选人|中表候选人	winning candidate	评标公示推荐的中标候选单位	招投标与工程
+评标委员会	评表委员会|平标委员会	bid evaluation committee	依法组建的评标专家小组	招投标与工程
+资格预审	资各预审|自格预审	prequalification	投标前对供应商资质与业绩的审查	招投标与工程
+履约保证金	旅约保证金|吕约保证金	performance bond	确保中标人按合同履约的担保资金	招投标与工程
+实质性响应	实值性响应|实指性响应	substantive responsiveness	满足招标文件关键星号条款的要求	招投标与工程
+否决投标	否决投表	bid rejection	未满足关键条款导致废标的认定	招投标与工程
+最高投标限价	最高投表限价	bid ceiling price	招标设定的最高报价上限	招投标与工程
+工程量清单	工程亮清单	bill of quantities	分部分项工程及设备计价清单	招投标与工程
+全生命周期成本	全生明周期成本	LCC; life-cycle cost	建设、运维、能耗与退役总成本	招投标与工程
+
+# ── 检测、试验与交付验收 ──
+型式试验	行事试验|形式试验|行式试验	type test	验证产品定型是否满足标准的全面检测	招投标与工程
+出厂试验	出厂实验	factory routine test	设备出厂前逐台进行的检验项目	招投标与工程
+例行试验	力行试验|立行试验	routine test	批量生产过程中的常规检验	招投标与工程
+第三方检测报告	第三方检测试验报告	third-party test report	具备资质检测机构出具的权威报告	招投标与工程
+CMA	西MA|CM诶	CMA	中国计量认证资质	招投标与工程
+CNAS	西NAS|CNA死	CNAS	中国合格评定国家认可委员会	招投标与工程
+到货验收	道货验收|倒货验收	delivery acceptance	设备运抵现场开箱数量与外观验收	招投标与工程
+投运验收	头运验收|投云验收	commissioning acceptance	设备并网带电试运行后的正式验收	招投标与工程
+试运行	市运行|事运行	trial operation	系统上线或设备投运初期的考核期	招投标与工程
+
+# ── 电力数字化、数模与实训 ──
+数模评审	树模评审|数磨评审	data model review	数据库表结构与数据模型规范审查	招投标与工程
+PDManer	PD曼纳|PD慢纳|皮弟曼纳	PDManer	常用数据库建模与数模评审工具	招投标与工程
+贯通率	关通率|冠通率	data connectivity rate	业务数据端到端采集与共享贯通指标	招投标与工程
+数据中台	数剧中台	data middle platform	统一数据汇聚、治理与服务共享平台	招投标与工程
+物联管理平台	物连管理平台	IoT management platform	电力物联网终端接入与统一管理平台	招投标与工程
+边缘物联代理	边沿物联代理|边缘物连代理	edge IoT agent	台区或站所侧部署的边缘计算网关软件	招投标与工程
+物联感知	物连感知	IoT sensing	配用电设备状态量与环境量在线监测	招投标与工程
+台账治理	太账治理|台帐治理	asset ledger governance	设备档案与拓扑台账数据清洗校核	招投标与工程
+主数据	住数据	master data	跨业务系统共享的核心基础编码数据	招投标与工程
+实训考评	时讯考评|实讯考评	practical training assessment	技能实训操作与考核评价系统	招投标与工程
+能力画像	能立画像	competency profiling	基于学习练考数据的技能维度评估	招投标与工程
+项目储备	项目楚备	project pipeline reserve	提前谋划入库的项目可研与预算编制	招投标与工程
+可研报告	科颜报告|可颜报告	feasibility study report	项目可行性研究与投资测算报告	招投标与工程	exact
