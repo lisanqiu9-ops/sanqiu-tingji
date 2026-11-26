@@ -22,9 +22,10 @@ public sealed class AppNotice
 /// Never uploads user data; silently skips when offline.
 public sealed class NoticeService
 {
-    /// Primary + fallback feed URLs. Put your Cloudflare custom domain first once deployed.
+    /// Primary + fallback feed URLs. Uses Cloudflare China-direct domain first, then GitHub Raw.
     public static readonly string[] DefaultFeedUrls =
     [
+        "https://tingji.liwu.dpdns.org/notices.json",
         "https://raw.githubusercontent.com/lisanqiu9-ops/sanqiu-tingji/feat/local-custom/notices.json",
     ];
 

@@ -58,4 +58,12 @@ public sealed class NoticeServiceTests
         var parsed = NoticeService.ParseAndFilter("{not valid json", "1.0.4", DateTime.UtcNow);
         Assert.Empty(parsed);
     }
+
+    [Fact]
+    public void PrioritizesCloudflareMirrorWithGithubFallback()
+    {
+        Assert.True(NoticeService.DefaultFeedUrls.Length >= 2);
+        Assert.Equal("https://tingji.liwu.dpdns.org/notices.json", NoticeService.DefaultFeedUrls[0]);
+        Assert.Contains(NoticeService.DefaultFeedUrls, u => u.Contains("raw.githubusercontent.com", StringComparison.OrdinalIgnoreCase));
+    }
 }

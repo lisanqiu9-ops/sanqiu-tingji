@@ -1,0 +1,15 @@
+{
+  "name": "sanqiu-tingji-site",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Landing page, static notices feed, and China-direct GitHub Releases edge proxy for SanqiuTingji",
+  "scripts": {
+    "sync": "node -e \"const fs=require('fs');fs.copyFileSync('../notices.json','./public/notices.json');console.log('Synced notices.json')\"",
+    "dev": "npm run sync && wrangler dev",
+    "deploy": "npm run sync && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.14.0"
+  }
+}
