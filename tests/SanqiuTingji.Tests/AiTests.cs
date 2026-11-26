@@ -266,4 +266,20 @@ public sealed class AiTests : IDisposable
         AIKey.Remove("a");
         Assert.Null(AIKey.Read("a"));
     }
+
+    [Fact]
+    public void GeminiPresetAndManualTriggerDefaultsAreConsistent()
+    {
+        var gemini = ProviderPreset.Find("gemini");
+        Assert.Equal("https://generativelanguage.googleapis.com/v1beta/openai", gemini.BaseUrl);
+        Assert.Contains("gemini-2.5-flash", gemini.Models);
+
+        var defaults = new AppSettings();
+        Assert.Equal(AiEngineMode.LocalCli, defaults.AiMode);
+        Assert.False(defaults.LiveNotes);
+        Assert.False(defaults.AutoCliNotesOnEnd);
+
+        foreach (var cli in CliBridge.Presets.Where(p => p.Id != "custom"))
+            Assert.False(string.IsNullOrWhiteSpace(cli.InstallCommand), cli.Id);
+    }
 }

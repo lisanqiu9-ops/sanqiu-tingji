@@ -64,7 +64,52 @@ public sealed class AppModel
     public string? CliGeneratingStatus { get; private set; }
     public DateTime? CliGeneratingStartedAt { get; private set; }
     public bool CliBridgeReady => CliBridge.FromSettings(Settings).IsReady;
+    public bool ActiveCliReady => Settings.AiMode == AiEngineMode.LocalCli && CliBridgeReady;
+    public bool ActiveCloudReady => Settings.AiMode == AiEngineMode.CloudApi && Ai.HasKey;
     private CancellationTokenSource? cliNotesCts;
+
+    public async Task<NotesImportResult> GenerateNotesViaCloudAsync(string sessionId)
+    {
+        if (!Ai.HasKey || Ai.Current == null)
+            return new NotesImportResult(false, "尚未配置在线云端 API Key，请先在「设置 › AI 引擎」填写并验证。");
+        var session = Store.Snapshot(sessionId);
+        if (session == null || session.Lines.Count == 0)
+            return new NotesImportResult(false, "该会议暂无逐字稿。");
+
+        CliGeneratingId = sessionId;
+        CliGeneratingStartedAt = DateTime.UtcNow;
+        CliGeneratingStatus = $"正在通过云端 API（{Ai.Describe}）总结纪要…";
+        Ui(() => NotesChanged?.Invoke());
+        try
+        {
+            await Notes.Update(sessionId, final: true);
+            if (Notes.Status is NotesEngine.State.Idle && Store.Snapshot(sessionId)?.Notes is { IsEmpty: false } n)
+            {
+                Say($"纪要已生成：{n.Topics.Count} 个议题，{n.Todos.Count} 项待办");
+                return new NotesImportResult(true, "已通过云端 API 生成纪要", n, n.Topics.Count, n.Conclusions.Count, n.Todos.Count, n.Terms.Count);
+            }
+            var reason = Notes.Status switch
+            {
+                NotesEngine.State.InvalidKey => "云端 API Key 无效或无权限，请在「设置 › AI 引擎」核对。",
+                NotesEngine.State.RateLimited => "云端 API 触发限流，请稍后再试。",
+                NotesEngine.State.NoKey => "尚未配置云端 API Key。",
+                _ => "云端 API 返回失败或超时，请检查网络、模型名与额度。",
+            };
+            return new NotesImportResult(false, reason);
+        }
+        catch (Exception e)
+        {
+            Log.Debug($"cloud notes: failed {e.Message}");
+            return new NotesImportResult(false, $"云端 API 生成失败：{e.Message}");
+        }
+        finally
+        {
+            CliGeneratingId = null;
+            CliGeneratingStatus = null;
+            CliGeneratingStartedAt = null;
+            Ui(() => NotesChanged?.Invoke());
+        }
+    }
 
     public void CancelCliNotes()
     {
@@ -152,7 +197,8 @@ public sealed class AppModel
         Ai.Provider = Settings.ActiveProvider;
         Ai.Refresh();
         Translator = new TranslationService(Ai);
-        Notes = new NotesEngine(Ai, Store) { Template = TemplateFor, Terms = Glossary, Live = () => Settings.LiveNotes };
+        // Never auto-call cloud AI mid-meeting: notes are generated on explicit user trigger (or optional end-of-meeting).
+        Notes = new NotesEngine(Ai, Store) { Template = TemplateFor, Terms = Glossary, Live = () => false };
         Translator.Terms = Glossary;
         // Groups limited to some templates count only in those meetings: the one being heard now,
         // else (imports, the try-it box) the default template.
@@ -268,7 +314,7 @@ public sealed class AppModel
         var finishedId = LiveSessionId;
         Meeting?.Stop();
         StateChanged?.Invoke();
-        if (finishedId != null && Settings.AutoCliNotesOnEnd && CliBridgeReady)
+        if (finishedId != null && Settings.AutoCliNotesOnEnd && ActiveCliReady)
         {
             var snap = Store.Snapshot(finishedId);
             if (snap is { Lines.Count: > 0 })

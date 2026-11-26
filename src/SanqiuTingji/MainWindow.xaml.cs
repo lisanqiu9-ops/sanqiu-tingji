@@ -267,22 +267,26 @@ public partial class MainWindow : Window
         WorkshopBtn.IsEnabled = !generating && s.Id != model.LiveSessionId;
         var tabWillSwitch = !keepTab && switched && ((s.Notes is { IsEmpty: false }) != (TabNotes.IsChecked == true));
         if (switched && !tabWillSwitch) Motion.FadeIn(Detail, ms: 160);
-        UiText.Set(NotesBtn, "ToolTip", () => cliBusy ? (model.CliGeneratingStatus ?? "正在通过本地 CLI 整理纪要…")
+        UiText.Set(NotesBtn, "ToolTip", () => cliBusy ? (model.CliGeneratingStatus ?? "正在整理纪要…")
             : generating ? L.T("AI 正在通读整场会议…")
             : s.Notes?.UpdatedAt is { } at ? L.F("纪要更新于 {0:M月d日 HH:mm}", at.ToLocalTime())
-            : model.CliBridgeReady ? $"通过本地 CLI（{CliBridge.FindPreset(model.Settings.CliNotesPreset).Name}）自动生成纪要"
-            : "打开免 API 纪要工坊");
+            : model.Settings.AiMode == AiEngineMode.CloudApi
+                ? (model.Ai.HasKey ? $"通过在线云端 API（{model.Ai.Describe}）生成纪要" : "在线云端 API 未配置，点击前往「设置 › AI 引擎」")
+                : (model.CliBridgeReady ? $"通过本地 CLI（{CliBridge.FindPreset(model.Settings.CliNotesPreset).Name}）生成纪要" : "本地 CLI 未配置，点击前往设置或手工工坊"));
         var names = SpeakerLabels.Names(s);
         var builtIn = model.TemplateFor(s).BuiltIn;
-        var key = string.Join("|", s.Id, L.Language, model.Ai.HasKey, model.CliBridgeReady, cliBusy, model.Settings.CliNotesPreset, glossaryRevision, builtIn,
+        var key = string.Join("|", s.Id, L.Language, model.Settings.AiMode, model.Ai.HasKey, model.Ai.Describe, model.CliBridgeReady, cliBusy, model.Settings.CliNotesPreset, glossaryRevision, builtIn,
             string.Join(",", names.OrderBy(n => n.Key).Select(n => $"{n.Key}={n.Value}")),
             s.Notes is { IsEmpty: false } ? System.Text.Json.JsonSerializer.Serialize(s.Notes) : "");
         if (key == notesKey && NotesHost.Content != null) { FinishDetail(s, keepTab, switched); return; }
         notesKey = key;
-        var emptyNotesHint = model.CliBridgeReady
-            ? $"这场会议还没有纪要。点右上角「生成纪要」将自动调用本地 CLI（{CliBridge.FindPreset(model.Settings.CliNotesPreset).Name}）生成，也可以点「手工工坊」手动复制粘贴。"
-            : model.Ai.HasKey ? L.T("这场会议还没有纪要，点右上角「生成纪要」。")
-            : "这场会议还没有纪要。可在「设置 › 本地 CLI」启用自动调用，或点右上角「生成纪要」打开免 API 手工工坊。";
+        var emptyNotesHint = model.Settings.AiMode == AiEngineMode.CloudApi
+            ? (model.Ai.HasKey
+                ? $"这场会议还没有纪要。点右上角「生成纪要」将调用在线云端 API（{model.Ai.Describe}）总结，或点「手工工坊」手动回填。"
+                : "当前为「在线云端 API」模式，尚未填写 API Key。请前往「设置 › AI 引擎」配置，或点「手工工坊」手动整理。")
+            : (model.CliBridgeReady
+                ? $"这场会议还没有纪要。点右上角「生成纪要」将自动调用本地 CLI（{CliBridge.FindPreset(model.Settings.CliNotesPreset).Name}）总结，或点「手工工坊」手动回填。"
+                : "这场会议还没有纪要。可在「设置 › AI 引擎」选择本机 CLI 或在线云端 API，也可以直接点「手工工坊」手动整理。");
         NotesHost.Content = s.Notes is { IsEmpty: false } n
             ? NotesRenderer.Build(n, s.StartedAt, 14, cards: true, names: names, localizeHeadings: builtIn,
                 termCard: BuildTermCard)
@@ -524,26 +528,14 @@ public partial class MainWindow : Window
         fillingTemplates = false;
     }
 
-    /// A new template for this meeting: rewrite its notes in that shape (a live meeting picks it up
-    /// at its next update).
+    /// Saves the chosen template for this meeting without auto-triggering cloud API calls.
     private void Template_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (fillingTemplates || selected == null || TemplateBox.SelectedItem is not ComboBoxItem { Tag: string tid }) return;
         var s = model.Store.Get(selected);
         if (s == null || model.TemplateFor(s).Id == tid) return;
         model.Store.SetTemplate(selected, tid == model.Settings.DefaultTemplateId ? null : tid);
-        if (selected == model.LiveSessionId)
-        {
-            UiText.Set(NotesBtn, "ToolTip", () => L.T("下一次更新起按新模板整理"));
-            model.Notes.UpdateNow();
-            return;
-        }
-        if (model.Ai.HasKey && s.Lines.Count > 0)
-        {
-            model.Notes.Generate(selected);
-            ShowDetail(selected, keepTab: true);
-            TabNotes.IsChecked = true;
-        }
+        ShowGlassToast("已切换本场模板，点击「重新生成」即可按新模板整理");
     }
 
     private void Glossary_Click(object sender, RoutedEventArgs e) => ((App)Application.Current).OpenGlossary();
@@ -857,46 +849,68 @@ public partial class MainWindow : Window
     {
         if (selected == null) return;
         var id = selected;
-        if (model.CliBridgeReady)
+        var isCloud = model.Settings.AiMode == AiEngineMode.CloudApi;
+
+        if (isCloud)
         {
+            if (!model.Ai.HasKey)
+            {
+                if (Dialog.Confirm(this, "尚未配置在线云端 API",
+                        "当前已选「在线云端 API」模式，但还没有填写 API Key。\n\n是否前往「设置 › AI 引擎」填写？（也可以直接用「手工工坊」）",
+                        "前往设置"))
+                    ((App)Application.Current).OpenSettings(aiEngineTab: true);
+                return;
+            }
             TabNotes.IsChecked = true;
             HideCliDoneBanner();
-            var result = await model.GenerateNotesViaCliAsync(id);
-            notesKey = "";
-            RefreshList();
-            if (selected == id)
+            var cloudResult = await model.GenerateNotesViaCloudAsync(id);
+            HandleGenerateResult(id, cloudResult, "在线云端 API 生成失败");
+            return;
+        }
+
+        if (!model.CliBridgeReady)
+        {
+            if (Dialog.Confirm(this, "尚未检测到可用本地 CLI",
+                    "当前为「本地 CLI 桥接」模式，但尚未检测到已安装的 CLI 工具。\n\n你可以前往「设置 › AI 引擎」切换在线云端 API，或先用「手工工坊」。",
+                    "前往设置"))
+                ((App)Application.Current).OpenSettings(aiEngineTab: true);
+            return;
+        }
+
+        TabNotes.IsChecked = true;
+        HideCliDoneBanner();
+        var cliResult = await model.GenerateNotesViaCliAsync(id);
+        HandleGenerateResult(id, cliResult, "本地 CLI 生成失败");
+    }
+
+    private void HandleGenerateResult(string id, NotesImportResult result, string failTitle)
+    {
+        notesKey = "";
+        RefreshList();
+        if (selected == id)
+        {
+            ShowDetail(id, keepTab: true);
+            if (result.Success)
             {
-                ShowDetail(id, keepTab: true);
-                if (result.Success)
-                {
-                    AnimateNotesReveal();
-                    ShowCliDoneBanner($"纪要已生成 · {result.TopicCount} 个议题 · {result.TodoCount} 项待办 · {result.TermCount} 个术语");
-                }
-                else if (!result.Message.Contains("已取消"))
-                {
-                    if (Dialog.Confirm(this, "本地 CLI 生成失败", result.Message + "\n\n是否改用「手工工坊」复制提示词？", "打开手工工坊"))
-                        OpenWorkshop(id);
-                }
-            }
-            else if (result.Success)
-            {
-                var title = model.Store.Get(id)?.DisplayTitle ?? "后台会议";
-                ShowGlassToast($"「{title}」纪要已生成");
+                AnimateNotesReveal();
+                ShowCliDoneBanner($"纪要已生成 · {result.TopicCount} 个议题 · {result.TodoCount} 项待办 · {result.TermCount} 个术语");
             }
             else if (!result.Message.Contains("已取消"))
             {
-                var title = model.Store.Get(id)?.DisplayTitle ?? "后台会议";
-                ShowGlassToast($"「{title}」纪要生成失败，请切回查看");
+                if (Dialog.Confirm(this, failTitle, result.Message + "\n\n是否改用「手工工坊」复制提示词？", "打开手工工坊"))
+                    OpenWorkshop(id);
             }
-            return;
         }
-        if (!model.Ai.HasKey)
+        else if (result.Success)
         {
-            OpenWorkshop(id);
-            return;
+            var title = model.Store.Get(id)?.DisplayTitle ?? "后台会议";
+            ShowGlassToast($"「{title}」纪要已生成");
         }
-        model.Notes.Generate(id);
-        ShowDetail(id, keepTab: true);
+        else if (!result.Message.Contains("已取消"))
+        {
+            var title = model.Store.Get(id)?.DisplayTitle ?? "后台会议";
+            ShowGlassToast($"「{title}」纪要生成失败，请切回查看");
+        }
     }
 
     private void CliCancel_Click(object sender, RoutedEventArgs e)

@@ -151,8 +151,9 @@ public sealed class MeetingController
         var audio = StopRecording();
         if (id != null && store.Get(id) != null)
         {
-            notes.Finish();
-            namer?.Guess(id, force: true);
+            var autoCloud = settings.AiMode == AiEngineMode.CloudApi && settings.AutoCliNotesOnEnd;
+            notes.Finish(generateFinal: autoCloud);
+            if (autoCloud) namer?.Guess(id, force: true);
         }
         Log.Debug($"meeting: ended {id}");
         if (id != null && audio.Any(a => a != null))
@@ -330,7 +331,7 @@ public sealed class MeetingController
                 s.Lines = rebuilt;
             });
             if (settings.TranslationOn) foreach (var lineId in added) TranslateLine(id, lineId);
-            notes.Generate(id);
+            if (settings.AiMode == AiEngineMode.CloudApi && settings.AutoCliNotesOnEnd) notes.Generate(id);
             Redone?.Invoke(id, plan.Relabelled, plan.Split);
         }
         catch (Exception e)

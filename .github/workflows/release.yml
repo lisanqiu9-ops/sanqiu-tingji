@@ -59,6 +59,7 @@ jobs:
           $curated = "release-notes/$tag.md"
           if (Test-Path $curated) {
             $body = (Get-Content $curated -Raw -Encoding utf8).Trim() -split "`r?`n"
+            $page = $body
           } else {
             $subjects = git log $range --no-merges --format=%s
             $feat = $subjects | Where-Object { $_ -match '^feat(\(.+\))?: ' } | ForEach-Object { "- " + ($_ -replace '^feat(\(.+\))?: ', '') }
@@ -66,11 +67,9 @@ jobs:
             $body = @()
             if ($feat) { $body += @("## 新功能", "") + $feat + "" }
             if ($fix) { $body += @("## 修复", "") + $fix }
+            $downloads = @("## 下载安装", "", "- **SanqiuTingji-Setup.exe**（推荐）：Windows 安装包，自带运行环境，安装时可勾选自动创建桌面快捷方式", "- **SanqiuTingji.App-win-Portable.zip**：免安装便携版，解压后双击 `SanqiuTingji.exe` 运行")
+            $page = $body + @("") + $downloads
           }
-          $downloads = @("## 下载", "", "- **SanqiuTingji-Setup.exe**：安装包，可以选安装位置，之后会自动更新", "- **SanqiuTingji.App-win-Portable.zip**：免安装版，解压即用，也会自动更新")
-          $commits = git log $range --no-merges --format="* %s ([%h]($env:REPO_URL/commit/%H))"
-          $page = $body + @("") + $downloads + @("", "---", "", "## 完整改动", "", "<details>", "<summary>查看全部提交</summary>", "") + $commits + @("", "</details>", "")
-          if ($prev) { $page += "完整对比：$env:REPO_URL/compare/$prev...$tag" }
           $page -join "`n" | Out-File -Encoding utf8 notes.md
           # The app shows the "- " lines of the notes: links read as text there, so they go.
           $app = $body | ForEach-Object {
@@ -78,7 +77,6 @@ jobs:
           }
           $app -join "`n" | Out-File -Encoding utf8 notes-app.md
           Get-Content notes.md
-          Get-Content notes-app.md
 
       - name: Pack
         shell: pwsh

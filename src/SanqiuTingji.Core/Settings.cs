@@ -4,6 +4,9 @@ namespace SanqiuTingji;
 
 public enum DisplayMode { Notes, Subtitles }
 
+/// Which AI backend generates meeting notes when triggered: local subscribed CLI bridge or online cloud API.
+public enum AiEngineMode { LocalCli, CloudApi }
+
 /// Every setting, saved as %APPDATA%\SanqiuTingji\settings.json. Never holds an API key.
 public sealed class AppSettings
 {
@@ -45,7 +48,9 @@ public sealed class AppSettings
     public bool IncludeTranslationInExport { get; set; }
     /// Optional default folder for exporting meeting minutes and transcripts.
     public string? DefaultExportDirectory { get; set; }
-    /// Automatically run the local CLI notes generator right after a meeting stops.
+    /// Active AI engine mode (LocalCli = local subscribed CLI bridge, CloudApi = online OpenAI-compatible API).
+    public AiEngineMode AiMode { get; set; } = AiEngineMode.LocalCli;
+    /// Automatically run the configured AI engine right after a meeting stops (off by default: manual trigger).
     public bool AutoCliNotesOnEnd { get; set; }
     /// Enable automatic meeting notes generation via a local AI CLI (agy / codex / gemini / claude / custom).
     public bool CliNotesEnabled { get; set; }

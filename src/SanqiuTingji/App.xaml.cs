@@ -453,12 +453,15 @@ public partial class App : Application
         Bring(templateWindow);
     }
 
-    public void OpenSettings()
+    public void OpenSettings() => OpenSettings(false);
+
+    public void OpenSettings(bool aiEngineTab)
     {
         UiWatch.Time("open settings", () =>
         {
             settingsWindow ??= new SettingsWindow(Model);
             settingsWindow.Closed += (_, _) => settingsWindow = null;
+            if (aiEngineTab) settingsWindow.SelectAiEngineTab();
             Bring(settingsWindow);
         });
     }

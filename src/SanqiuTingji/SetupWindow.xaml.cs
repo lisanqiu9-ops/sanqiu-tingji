@@ -139,8 +139,8 @@ public partial class SetupWindow : Window
     private void OnSubtitle(MeetingController.Subtitle s)
     {
         if (s.Source.Length == 0) return;
-        UiText.Set(TryDst, "Text", () => s.Translation.Length > 0 ? (s.Translation.Length > 80 ? "…" + s.Translation[^80..] : s.Translation) : L.T("（译文稍后出现）"));
-        TrySrc.Text = s.Source.Length > 120 ? "…" + s.Source[^120..] : s.Source;
+        TryDst.Text = s.Source.Length > 90 ? "…" + s.Source[^90..] : s.Source;
+        TrySrc.Text = "✓ 识别正常，点击右下角「完成」进入主界面";
     }
 
     /// Platforms offered here: those with a model to start from (the rest are set up in settings).

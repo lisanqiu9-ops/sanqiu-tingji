@@ -13,12 +13,13 @@
     <RootNamespace>SanqiuTingji.Setup</RootNamespace>
     <ApplicationIcon>..\assets\SanqiuTingji.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
     <Product>三秋听记</Product>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
     <Compile Include="..\src\SanqiuTingji.Core\Localization\L.cs" Link="Localization\L.cs" />
     <EmbeddedResource Include="..\src\SanqiuTingji.Core\Localization\Strings*.resx" Link="Localization\%(Filename)%(Extension)">
       <WithCulture>false</WithCulture>

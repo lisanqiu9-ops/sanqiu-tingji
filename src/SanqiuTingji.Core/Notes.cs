@@ -432,13 +432,13 @@ public sealed class NotesEngine
         Changed?.Invoke();
     }
 
-    public void Finish()
+    public void Finish(bool generateFinal = true)
     {
         timer?.Dispose();
         timer = null;
         var id = sessionId;
         sessionId = null;
-        if (id != null) _ = Update(id, final: true);
+        if (id != null && generateFinal) _ = Update(id, final: true);
     }
 
     public void Show(string id)

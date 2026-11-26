@@ -29,12 +29,13 @@ internal static class Program
 internal sealed class SetupForm : Form
 {
     private const string PackId = "SanqiuTingji.App";
-    private static readonly Color Accent = Color.FromArgb(0x11, 0x9C, 0x7A);
-    private static readonly Color Ink = Color.FromArgb(0x1E, 0x22, 0x35);
-    private static readonly Color Grey = Color.FromArgb(0x6B, 0x70, 0x80);
+    private static readonly Color Accent = Color.FromArgb(0x00, 0x7A, 0xFF);
+    private static readonly Color Ink = Color.FromArgb(0x14, 0x18, 0x24);
+    private static readonly Color Grey = Color.FromArgb(0x64, 0x6C, 0x80);
 
     private readonly TextBox pathBox;
     private readonly Button browseBtn;
+    private readonly CheckBox desktopShortcutBox;
     private readonly Button installBtn;
     private readonly Button cancelBtn;
     private readonly Label statusLabel;
@@ -62,12 +63,12 @@ internal sealed class SetupForm : Form
 
         var layout = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 1, RowCount = 8,
+            Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 1, RowCount = 9,
             Padding = new Padding(28, 24, 28, 20), Margin = Padding.Empty,
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        for (var i = 0; i < 8; i++)
-            layout.RowStyles.Add(new RowStyle(i == 6 ? SizeType.Percent : SizeType.AutoSize, i == 6 ? 100 : 0));
+        for (var i = 0; i < 9; i++)
+            layout.RowStyles.Add(new RowStyle(i == 7 ? SizeType.Percent : SizeType.AutoSize, i == 7 ? 100 : 0));
         var header = new TableLayoutPanel
         {
             Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty,
@@ -139,12 +140,22 @@ internal sealed class SetupForm : Form
         var help = new Label
         {
             Text = existing != null
-                ? L.T("已经安装在这里，将覆盖安装为这个版本。要换位置，请先在 Windows「设置 › 应用」里卸载三秋听记。")
-                : L.T("程序约 300 MB；首次启动还会下载约 260 MB 的识别模型。装在当前用户下，不需要管理员权限，之后会自动更新。"),
+                ? L.T("已经安装在这里，将覆盖更新为当前版本。如需更换位置，请先在 Windows「设置 › 应用」里卸载三秋听记。")
+                : "无需管理员权限；首次启动会自动下载本机离线语音识别模型（约 260 MB），会议音频与纪要均保存在本机。",
             ForeColor = Grey, AutoSize = true, Dock = DockStyle.Top, Margin = new Padding(0, 10, 0, 0),
             MaximumSize = new Size(504, 0),
         };
         layout.Controls.Add(help, 0, 3);
+        desktopShortcutBox = new CheckBox
+        {
+            Text = "在桌面创建「三秋听记」快捷方式",
+            Checked = true,
+            AutoSize = true,
+            ForeColor = Ink,
+            Margin = new Padding(0, 14, 0, 0),
+            Cursor = Cursors.Hand,
+        };
+        layout.Controls.Add(desktopShortcutBox, 0, 4);
         if (existing != null)
         {
             pathBox.ReadOnly = true;
@@ -153,19 +164,19 @@ internal sealed class SetupForm : Form
         progress = new ProgressBar
         {
             Style = ProgressBarStyle.Marquee, Dock = DockStyle.Top, Height = 6,
-            Margin = new Padding(0, 18, 0, 0), Visible = false,
+            Margin = new Padding(0, 16, 0, 0), Visible = false,
         };
-        layout.Controls.Add(progress, 0, 4);
+        layout.Controls.Add(progress, 0, 5);
         statusLabel = new Label
         {
             ForeColor = Grey, AutoSize = true, Dock = DockStyle.Top, Margin = new Padding(0, 10, 0, 0),
             MaximumSize = new Size(504, 0),
         };
-        layout.Controls.Add(statusLabel, 0, 5);
+        layout.Controls.Add(statusLabel, 0, 6);
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill, AutoSize = true, FlowDirection = FlowDirection.RightToLeft,
-            WrapContents = false, Margin = new Padding(0, 20, 0, 0),
+            WrapContents = false, Margin = new Padding(0, 18, 0, 0),
         };
         installBtn = FlatButton(existing != null ? L.T("更新") : L.T("安装"), true);
         installBtn.AutoSize = true;
@@ -178,7 +189,7 @@ internal sealed class SetupForm : Form
         cancelBtn.Margin = new Padding(0, 0, 10, 0);
         cancelBtn.Click += (_, _) => Close();
         actions.Controls.AddRange([installBtn, cancelBtn]);
-        layout.Controls.Add(actions, 0, 7);
+        layout.Controls.Add(actions, 0, 8);
         AcceptButton = installBtn;
         Shown += (_, _) =>
         {
@@ -199,7 +210,7 @@ internal sealed class SetupForm : Form
             BackColor = primary ? Accent : Color.White, ForeColor = primary ? Color.White : Ink,
         };
         b.FlatAppearance.BorderColor = primary ? Accent : Color.FromArgb(0xD5, 0xD9, 0xE3);
-        b.FlatAppearance.MouseOverBackColor = primary ? Color.FromArgb(0x0E, 0x87, 0x6A) : Color.FromArgb(0xF3, 0xF5, 0xF9);
+        b.FlatAppearance.MouseOverBackColor = primary ? Color.FromArgb(0x00, 0x62, 0xD6) : Color.FromArgb(0xF3, 0xF5, 0xF9);
         return b;
     }
 
@@ -265,25 +276,54 @@ internal sealed class SetupForm : Form
             }
         }
 
-        installBtn.Enabled = cancelBtn.Enabled = browseBtn.Enabled = pathBox.Enabled = false;
+        installBtn.Enabled = cancelBtn.Enabled = browseBtn.Enabled = pathBox.Enabled = desktopShortcutBox.Enabled = false;
         progress.Visible = true;
         statusLabel.Text = L.T("正在安装，大约需要半分钟…");
+        var createDesktop = desktopShortcutBox.Checked;
         var (ok, error) = await Task.Run(() => RunVelopack(dir));
         progress.Visible = false;
         if (!ok)
         {
             statusLabel.Text = "";
             MessageBox.Show(this, L.T("安装没有成功：") + error, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
-            installBtn.Enabled = cancelBtn.Enabled = true;
+            installBtn.Enabled = cancelBtn.Enabled = desktopShortcutBox.Enabled = true;
             browseBtn.Enabled = pathBox.Enabled = existing == null;
             return;
         }
-        statusLabel.Text = L.T("安装完成，正在打开三秋听记…");
         var app = Path.Combine(dir, "current", "SanqiuTingji.exe");
+        SyncDesktopShortcut(app, createDesktop);
+        statusLabel.Text = L.T("安装完成，正在打开三秋听记…");
         try { if (File.Exists(app)) Process.Start(new ProcessStartInfo(app) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(app) }); }
         catch { }
         await Task.Delay(1200);
         Close();
+    }
+
+    /// Ensures the Desktop shortcut matches the user's checkbox (created by default, pointing cleanly to current\SanqiuTingji.exe).
+    private static void SyncDesktopShortcut(string exePath, bool wantShortcut)
+    {
+        try
+        {
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            if (string.IsNullOrEmpty(desktop) || !Directory.Exists(desktop)) return;
+            var lnk = Path.Combine(desktop, "三秋听记.lnk");
+            if (!wantShortcut)
+            {
+                if (File.Exists(lnk)) File.Delete(lnk);
+                return;
+            }
+            if (!File.Exists(exePath)) return;
+            var shellType = Type.GetTypeFromProgID("WScript.Shell");
+            if (shellType == null) return;
+            dynamic shell = Activator.CreateInstance(shellType);
+            dynamic shortcut = shell.CreateShortcut(lnk);
+            shortcut.TargetPath = exePath;
+            shortcut.WorkingDirectory = Path.GetDirectoryName(exePath);
+            shortcut.IconLocation = exePath + ",0";
+            shortcut.Description = "三秋听记 · 本地离线语音转写与智能会议纪要";
+            shortcut.Save();
+        }
+        catch { }
     }
 
     private static (bool Ok, string Error) RunVelopack(string dir)

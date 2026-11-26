@@ -3,332 +3,356 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SanqiuTingji.App"
         Foreground="#1E2235" FontFamily="Microsoft YaHei UI, Segoe UI"
-        Title="{local:Loc Key='设置'}" Width="640" Height="620" MinWidth="560" MinHeight="460" Background="#F5F6FA" WindowStartupLocation="CenterScreen">
+        Title="{local:Loc Key='设置'}" Width="680" Height="660" MinWidth="600" MinHeight="500" Background="#F5F6FA" WindowStartupLocation="CenterScreen">
     <Grid Background="{StaticResource SecondaryGlassBg}">
-    <TabControl x:Name="Pages" Background="Transparent" BorderThickness="0" Padding="0" Margin="24,12,24,16">
-        <TabControl.Resources>
-            <Style TargetType="TabItem" BasedOn="{StaticResource PageTab}"/>
-        </TabControl.Resources>
+        <TabControl x:Name="Pages" Background="Transparent" BorderThickness="0" Padding="0" Margin="24,12,24,16">
+            <TabControl.Resources>
+                <Style TargetType="TabItem" BasedOn="{StaticResource PageTab}"/>
+            </TabControl.Resources>
 
-        <!-- 收听与识别 -->
-        <TabItem Header="收听与识别">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
-                <StackPanel>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="{local:Loc Key='收听'}" Style="{StaticResource Overline}"/>
-                            <DockPanel Style="{StaticResource Row}">
-                                <CheckBox x:Name="ListenMicOn" DockPanel.Dock="Right" Style="{StaticResource Switch}" Checked="ListenMic_Changed" Unchecked="ListenMic_Changed"/>
-                                <TextBlock Text="{local:Loc Key='同时收听麦克风'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <DockPanel x:Name="ListenMicRow" Style="{StaticResource Row}">
-                                <ComboBox x:Name="ListenMicBox" DockPanel.Dock="Right" MinWidth="220" MaxWidth="300" SelectionChanged="Changed"/>
-                                <TextBlock Text="{local:Loc Key='用哪个麦克风'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock x:Name="FromHelp" Style="{StaticResource Helper}" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}" Visibility="Collapsed">
-                        <StackPanel>
-                            <TextBlock Text="{local:Loc Key='翻译'}" Style="{StaticResource Overline}"/>
-                            <DockPanel Style="{StaticResource Row}">
-                                <CheckBox x:Name="TranslateOn" DockPanel.Dock="Right" Style="{StaticResource Switch}" Checked="Changed" Unchecked="Changed"/>
-                                <TextBlock Text="{local:Loc Key='翻译字幕'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock Style="{StaticResource Helper}" Text="{local:Loc Key='默认关闭，只显示原文。开会时也可以在实时面板右上角或托盘菜单里随时打开。'}"/>
-                            <DockPanel Style="{StaticResource Row}" Margin="0,10,0,0">
-                                <ComboBox x:Name="TargetBox" DockPanel.Dock="Right" SelectionChanged="Changed"/>
-                                <TextBlock Text="{local:Loc Key='译成'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock Style="{StaticResource Helper}" Text="{local:Loc Key='自动：外语译成你的系统语言；对方说你的语言时，译成你的第二语言。'}"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="{local:Loc Key='显示'}" Style="{StaticResource Overline}"/>
-                            <DockPanel Style="{StaticResource Row}" Visibility="Collapsed">
-                                <Border DockPanel.Dock="Right" Background="#E8EBF2" CornerRadius="5" Padding="2">
-                                    <StackPanel Orientation="Horizontal">
-                                        <RadioButton x:Name="ModeNotes" Content="{local:Loc Key='实时面板'}" GroupName="mode" Style="{StaticResource Seg}" Checked="Changed"/>
-                                        <RadioButton x:Name="ModeSubs" Content="{local:Loc Key='悬浮字幕'}" GroupName="mode" Style="{StaticResource Seg}" Checked="Changed"/>
-                                    </StackPanel>
-                                </Border>
-                                <TextBlock Text="{local:Loc Key='收听时打开'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <DockPanel Style="{StaticResource Row}" Visibility="Collapsed">
-                                <Slider x:Name="FontSlider" DockPanel.Dock="Right" Width="190" Minimum="16" Maximum="44" TickFrequency="2"
-                                        IsSnapToTickEnabled="True" ValueChanged="Font_Changed"/>
-                                <TextBlock x:Name="FontText" Text="{local:Loc Key='悬浮字幕字号'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <CheckBox x:Name="Capturable" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='共享屏幕时，对对方隐藏实时面板和字幕'}" Margin="0,8,0,0" Checked="Changed" Unchecked="Changed"/>
-                            <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap" Text="{local:Loc Key='打开后截图、录屏和屏幕共享里都看不到它们，只有你自己看得到（窗口上会标「对方看不到」）。默认关闭，可以正常截图。'}"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="{local:Loc Key='发言人'}" Style="{StaticResource Overline}"/>
-                            <CheckBox x:Name="VoicesOn" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='按声音区分不同发言人（发言人 1、发言人 2…）'}" Checked="Changed" Unchecked="Changed"/>
-                            <TextBlock Style="{StaticResource Helper}" Text="{local:Loc Key='同一个声音说过两句后开始编号（之前的句子会一起补上）；太短的话（如“嗯”“好的”）不计入。'}"/>
-                            <CheckBox x:Name="RedoOn" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='会议结束后，用整场录音重新校对发言人'}" Margin="0,10,0,0" Checked="Changed" Unchecked="Changed"/>
-                            <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap" Text="{local:Loc Key='开会时只能根据已经听到的声音判断，开头几分钟和抢话容易分错；会后会拿整场的声音重新核对一遍，并更新纪要。录音只临时存在本机，校对完立即删除。'}"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="{local:Loc Key='词库'}" Style="{StaticResource Overline}"/>
-                            <DockPanel Style="{StaticResource Row}">
-                                <CheckBox x:Name="GlossaryOn" DockPanel.Dock="Right" Style="{StaticResource Switch}" Checked="Changed" Unchecked="Changed"/>
-                                <TextBlock Text="{local:Loc Key='识别后按词库纠正'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock x:Name="GlossaryHelp" Style="{StaticResource Helper}" TextWrapping="Wrap"/>
-                            <DockPanel Style="{StaticResource Row}" Margin="0,10,0,0" Visibility="Collapsed">
-                                <CheckBox x:Name="GlossaryAiOn" DockPanel.Dock="Right" Style="{StaticResource Switch}" Checked="Changed" Unchecked="Changed"/>
-                                <TextBlock Text="{local:Loc Key='疑似认错时让 AI 核对'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap" Visibility="Collapsed"
-                                       Text="{local:Loc Key='一句话里有读音接近词条、但没到自动替换程度的字时，让大模型判断要不要改。只采纳改成词库写法的改动；会消耗你的大模型额度，默认关闭。'}"/>
-                            <Button Content="{local:Loc Key='打开词库'}" Style="{StaticResource Btn}" HorizontalAlignment="Left" Margin="0,10,0,0" Click="Glossary_Click"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
-        </TabItem>
-
-        <!-- 本地 CLI（免 API 订阅桥接） -->
-        <TabItem Header="本地 CLI">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
-                <StackPanel>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="本地 CLI 纪要桥接" Style="{StaticResource Overline}"/>
-                            <CheckBox x:Name="CliEnabledOn" Style="{StaticResource SwitchRow}"
-                                      Content="启用本地 CLI 自动生成纪要（免 API Key，走本机已登录订阅）"
-                                      Checked="CliChanged" Unchecked="CliChanged"/>
-                            <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap"
-                                       Text="开启后，主界面点「生成纪要」会直接调用下方配置的本地 CLI（如 agy / codex / gemini / claude）自动完成整理并回填纪要卡片，无需复制粘贴。"/>
-                            <DockPanel Style="{StaticResource Row}" Margin="0,12,0,0">
-                                <Button DockPanel.Dock="Right" Content="自动检测" Style="{StaticResource Btn}" Margin="8,0,0,0" Click="CliDetect_Click"/>
-                                <ComboBox x:Name="CliPresetBox" DockPanel.Dock="Right" MinWidth="230" SelectionChanged="CliPreset_Changed"/>
-                                <TextBlock Text="CLI 预设" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock x:Name="CliPresetHint" Style="{StaticResource Helper}" TextWrapping="Wrap"/>
-                            <DockPanel Style="{StaticResource Row}" Margin="0,8,0,0">
-                                <TextBox x:Name="CliCmdBox" DockPanel.Dock="Right" Width="320" LostFocus="CliText_LostFocus"/>
-                                <TextBlock Text="命令 / 路径" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <DockPanel Style="{StaticResource Row}">
-                                <TextBox x:Name="CliArgsBox" DockPanel.Dock="Right" Width="320" LostFocus="CliText_LostFocus"/>
-                                <TextBlock Text="附加参数" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <DockPanel Style="{StaticResource Row}">
-                                <ComboBox x:Name="CliModeBox" DockPanel.Dock="Right" Width="320" SelectionChanged="CliChanged"/>
-                                <TextBlock Text="传入方式" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <DockPanel Style="{StaticResource Row}">
-                                <TextBox x:Name="CliModelBox" DockPanel.Dock="Right" Width="320" LostFocus="CliText_LostFocus"/>
-                                <TextBlock Text="模型（可选）" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock Style="{StaticResource Helper}" Text="留空则使用该 CLI 的默认模型；填了会自动附加模型参数（如 --model / -m）。"/>
-                            <DockPanel Margin="0,14,0,0">
-                                <Button x:Name="CliTestBtn" DockPanel.Dock="Right" Content="测试连通" Style="{StaticResource PrimaryBtn}" Click="CliTest_Click"/>
-                                <TextBlock x:Name="CliTestText" FontSize="12.5" Foreground="#646B80" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,10,0"/>
-                            </DockPanel>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="纪要模板与导出" Style="{StaticResource Overline}"/>
-                            <DockPanel Style="{StaticResource Row}">
-                                <Button DockPanel.Dock="Right" Content="打开模板中心" Style="{StaticResource Btn}" Click="Templates_Click"/>
-                                <TextBlock Text="管理 15 套内置模板与自定义模板" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <DockPanel Style="{StaticResource Row}" Margin="0,8,0,0">
-                                <TextBox x:Name="ExportDirBox" DockPanel.Dock="Right" Width="320" LostFocus="CliText_LostFocus"/>
-                                <TextBlock Text="默认导出目录" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock Style="{StaticResource Helper}" Text="可选：填写如 D:\Work document\2026年工作\会议，导出 Word / Markdown 时自动定位到此文件夹。"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
-        </TabItem>
-
-        <!-- AI 服务（个人无 API 订阅版暂隐藏） -->
-        <TabItem Header="{local:Loc Key='AI 服务'}" Visibility="Collapsed">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
-                <StackPanel>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="{local:Loc Key='当前使用'}" Style="{StaticResource Overline}"/>
-                            <DockPanel>
-                                <Button DockPanel.Dock="Right" Content="{local:Loc Key='＋ 添加服务'}" Style="{StaticResource Btn}" Margin="8,0,0,0" Click="AddProvider_Click"/>
-                                <ComboBox x:Name="ActiveBox" SelectionChanged="Active_Changed"/>
-                            </DockPanel>
-                            <TextBlock x:Name="KeyState" FontSize="13" Margin="0,10,0,0" TextWrapping="Wrap"/>
-                            <TextBlock Style="{StaticResource Helper}" Text="{local:Loc Key='用于会议纪要、整句翻译和识别发言人姓名。可以添加多个，随时切换；不设置也能用，只是没有 AI 纪要，整句翻译改用免费翻译。'}"/>
-                        </StackPanel>
-                    </Border>
-                    <Border x:Name="EditorCard" Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="{local:Loc Key='服务设置'}" Style="{StaticResource Overline}"/>
-                            <DockPanel Style="{StaticResource Row}">
-                                <ComboBox x:Name="PresetBox" DockPanel.Dock="Right" MinWidth="280" MaxDropDownHeight="420" SelectionChanged="Preset_Changed"/>
-                                <TextBlock Text="{local:Loc Key='平台'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock x:Name="PresetHint" Style="{StaticResource Helper}" Margin="0,0,0,4"/>
-                            <DockPanel Style="{StaticResource Row}">
-                                <TextBox x:Name="NameBox" DockPanel.Dock="Right" Width="280"/>
-                                <TextBlock Text="{local:Loc Key='名称'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <DockPanel Style="{StaticResource Row}">
-                                <TextBox x:Name="UrlBox" DockPanel.Dock="Right" Width="280"/>
-                                <TextBlock Text="Base URL" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <DockPanel Style="{StaticResource Row}">
-                                <PasswordBox x:Name="KeyBox" DockPanel.Dock="Right" Width="280"/>
-                                <TextBlock Text="API key" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <DockPanel Margin="0,0,0,4">
-                                <Button x:Name="KeyLink" DockPanel.Dock="Right" Content="{local:Loc Key='去申请 key ↗'}" Style="{StaticResource GhostBtn}" Click="GetKey_Click"/>
-                                <TextBlock x:Name="KeyHint" Style="{StaticResource Helper}" VerticalAlignment="Center" Margin="0"/>
-                            </DockPanel>
-                            <DockPanel Style="{StaticResource Row}">
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                    <ComboBox x:Name="ModelBox" IsEditable="True" Width="280" MaxDropDownHeight="360"/>
-                                </StackPanel>
-                                <TextBlock Text="{local:Loc Key='模型'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <DockPanel Margin="0,2,0,0">
-                                <Button x:Name="FetchBtn" DockPanel.Dock="Right" Content="{local:Loc Key='获取模型列表'}" Style="{StaticResource GhostBtn}" Click="FetchModels_Click"/>
-                                <TextBlock x:Name="ModelHint" Style="{StaticResource Helper}" VerticalAlignment="Center" Margin="0"/>
-                            </DockPanel>
-                            <DockPanel Margin="0,14,0,0">
-                                <Button DockPanel.Dock="Right" x:Name="SaveBtn" Content="{local:Loc Key='保存并验证'}" Style="{StaticResource PrimaryBtn}" Click="SaveProvider_Click"/>
-                                <Button x:Name="DeleteBtn" Content="{local:Loc Key='删除这个服务'}" Style="{StaticResource DeleteBtn}"
-                                        HorizontalAlignment="Left" Click="DeleteProvider_Click"/>
-                            </DockPanel>
-                            <TextBlock Style="{StaticResource Helper}" Text="{local:Loc Key='key 加密保存在这台电脑上，不会出现在日志和导出文件里。'}"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="{local:Loc Key='纪要'}" Style="{StaticResource Overline}"/>
-                            <DockPanel Style="{StaticResource Row}">
-                                <ComboBox x:Name="TemplateDefaultBox" DockPanel.Dock="Right" MinWidth="220" MaxDropDownHeight="420" SelectionChanged="Changed"/>
-                                <TextBlock Text="{local:Loc Key='默认模板'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <DockPanel Margin="0,0,0,6">
-                                <Button DockPanel.Dock="Right" Content="{local:Loc Key='打开模板中心'}" Style="{StaticResource GhostBtn}" Click="Templates_Click"/>
-                                <TextBlock Style="{StaticResource Helper}" Margin="0" VerticalAlignment="Center"
-                                           Text="{local:Loc Key='15 个内置模板：项目周会、站会、需求评审、复盘、客户拜访、面试……也可以自己做。'}"/>
-                            </DockPanel>
-                            <DockPanel Style="{StaticResource Row}">
-                                <ComboBox x:Name="NotesLangBox" DockPanel.Dock="Right" SelectionChanged="Changed"/>
-                                <TextBlock Text="{local:Loc Key='纪要用的语言'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <CheckBox x:Name="LiveNotesOn" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='开会时实时整理纪要'}" Margin="0,10,0,0" Checked="Changed" Unchecked="Changed"/>
-                            <TextBlock Style="{StaticResource Helper}" Text="{local:Loc Key='打开时，开会期间大约每 45 秒请 AI 更新一次纪要。关掉可以省下大部分 token：会议结束后整理一次，也可以随时点「生成纪要」。'}"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
-        </TabItem>
-
-        <!-- 会议 -->
-        <TabItem Header="{local:Loc Key='会议'}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
-                <StackPanel>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="会后自动整理" Style="{StaticResource Overline}"/>
-                            <CheckBox x:Name="AutoCliEndOn" Style="{StaticResource SwitchRow}"
-                                      Content="会议结束后，自动通过本地 CLI 生成纪要" Checked="Changed" Unchecked="Changed"/>
-                            <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap"
-                                       Text="开启后，只要已启用「本地 CLI」桥接，结束会议即自动在后台整理出完整纪要，无需再手动点击。"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="{local:Loc Key='自动结束'}" Style="{StaticResource Overline}"/>
-                            <CheckBox x:Name="FollowApps" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='会议软件挂断后，自动结束本场记录'}" Checked="Changed" Unchecked="Changed"/>
-                            <TextBlock Style="{StaticResource Helper}" Text="{local:Loc Key='识别 Zoom、Teams、腾讯会议、飞书、钉钉、Webex 等：它们不再占用麦克风，就当作会议结束。'}"/>
-                            <DockPanel Style="{StaticResource Row}" Margin="0,12,0,0">
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                    <ComboBox x:Name="SilenceMinBox" MinWidth="90" SelectionChanged="Changed"/>
-                                    <ComboBox x:Name="SilenceBox" MinWidth="130" Margin="8,0,0,0" SelectionChanged="Changed"/>
-                                </StackPanel>
-                                <TextBlock Text="{local:Loc Key='没人说话超过'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
-        </TabItem>
-
-        <!-- 通用 -->
-        <TabItem Header="{local:Loc Key='通用'}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
-                <StackPanel>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <DockPanel Style="{StaticResource Row}">
-                                <ComboBox x:Name="UiLanguageBox" DockPanel.Dock="Right" MinWidth="210" SelectionChanged="UiLanguage_Changed"/>
-                                <TextBlock Text="{local:Loc Key='界面语言'}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap" Text="{local:Loc Key='切换后立即生效。字幕和纪要语言可分别设置。'}"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="{local:Loc Key='启动'}" Style="{StaticResource Overline}"/>
-                            <CheckBox x:Name="LoginOn" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='登录 Windows 后自动启动'}" Checked="Changed" Unchecked="Changed"/>
-                            <CheckBox x:Name="TrayStartOn" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='单击通知区域图标时直接开始收听'}" Margin="0,10,0,0"
-                                      Checked="Changed" Unchecked="Changed"/>
-                            <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap"
-                                       Text="关闭时，待机状态下单击托盘图标直接显示主窗口；开启后，单击图标立即开始收听。"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}">
-                        <StackPanel>
-                            <TextBlock Text="本机模型与录音存储" Style="{StaticResource Overline}"/>
-                            <Border Background="#F2FFFFFF" BorderBrush="#4428CD41" BorderThickness="1" CornerRadius="11" Padding="12,10" Margin="0,2,0,12">
-                                <DockPanel>
-                                    <Border x:Name="AudioSizeBadge" DockPanel.Dock="Right" Background="#16007AFF" CornerRadius="10" Padding="10,4" VerticalAlignment="Center" Margin="10,0,0,0">
-                                        <TextBlock x:Name="AudioSizeBadgeText" Text="录音 0 B" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource Primary}"/>
-                                    </Border>
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Ellipse x:Name="EngineStatusDot" Width="8" Height="8" Fill="{StaticResource OnAir}" VerticalAlignment="Center" Margin="0,0,9,0"/>
-                                        <StackPanel>
-                                            <TextBlock x:Name="EngineStatusTitle" Text="本地引擎就绪 · 离线可用" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
-                                            <TextBlock x:Name="ModelState" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                                        </StackPanel>
-                                    </StackPanel>
+            <!-- 1. 收听与识别 -->
+            <TabItem Header="收听与识别">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
+                    <StackPanel>
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <TextBlock Text="{local:Loc Key='收听'}" Style="{StaticResource Overline}"/>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <CheckBox x:Name="ListenMicOn" DockPanel.Dock="Right" Style="{StaticResource Switch}" Checked="ListenMic_Changed" Unchecked="ListenMic_Changed"/>
+                                    <TextBlock Text="{local:Loc Key='同时收听麦克风'}" VerticalAlignment="Center"/>
                                 </DockPanel>
-                            </Border>
-                            <CheckBox x:Name="SaveAudioOn" Style="{StaticResource SwitchRow}" Content="保存会议原声录音（16kHz M4A 轻量压缩，支持原声回放与逐字稿联动）"
-                                      Checked="Changed" Unchecked="Changed"/>
-                            <TextBlock x:Name="AudioStorageText" Style="{StaticResource Helper}" TextWrapping="Wrap"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                <Button Content="{local:Loc Key='打开数据文件夹'}" Style="{StaticResource Btn}" Click="OpenData_Click" Margin="0,0,8,0"/>
-                                <Button x:Name="CleanAudioBtn" Content="清理全部录音（保留纪要）" Style="{StaticResource DeleteBtn}" Click="CleanAllAudio_Click" Margin="0,0,8,0"/>
-                                <Button Content="{local:Loc Key='查看运行日志'}" Style="{StaticResource GhostBtn}" Click="OpenLog_Click"/>
+                                <DockPanel x:Name="ListenMicRow" Style="{StaticResource Row}">
+                                    <ComboBox x:Name="ListenMicBox" DockPanel.Dock="Right" MinWidth="220" MaxWidth="300" SelectionChanged="Changed"/>
+                                    <TextBlock Text="{local:Loc Key='用哪个麦克风'}" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <TextBlock x:Name="FromHelp" Style="{StaticResource Helper}" TextWrapping="Wrap"/>
                             </StackPanel>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}" Visibility="Collapsed">
-                        <StackPanel>
-                            <TextBlock Text="{local:Loc Key='版本与更新'}" Style="{StaticResource Overline}"/>
-                            <DockPanel>
-                                <Button x:Name="UpdateBtn" DockPanel.Dock="Right" Content="{local:Loc Key='检查更新'}" Style="{StaticResource Btn}" Click="Update_Click"/>
-                                <TextBlock x:Name="VersionText" FontSize="13" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock x:Name="UpdateText" Style="{StaticResource Helper}" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-                    <TextBlock x:Name="AboutText" Style="{StaticResource Helper}" Margin="2,4,0,0" TextWrapping="Wrap"/>
-                </StackPanel>
-            </ScrollViewer>
-        </TabItem>
-    </TabControl>
+                        </Border>
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <TextBlock Text="{local:Loc Key='显示'}" Style="{StaticResource Overline}"/>
+                                <CheckBox x:Name="Capturable" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='共享屏幕时，对对方隐藏实时面板和字幕'}" Margin="0,4,0,0" Checked="Changed" Unchecked="Changed"/>
+                                <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap" Text="{local:Loc Key='打开后截图、录屏和屏幕共享里都看不到它们，只有你自己看得到（窗口上会标「对方看不到」）。默认关闭，可以正常截图。'}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <TextBlock Text="{local:Loc Key='发言人'}" Style="{StaticResource Overline}"/>
+                                <CheckBox x:Name="VoicesOn" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='按声音区分不同发言人（发言人 1、发言人 2…）'}" Checked="Changed" Unchecked="Changed"/>
+                                <TextBlock Style="{StaticResource Helper}" Text="{local:Loc Key='同一个声音说过两句后开始编号（之前的句子会一起补上）；太短的话（如“嗯”“好的”）不计入。'}"/>
+                                <CheckBox x:Name="RedoOn" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='会议结束后，用整场录音重新校对发言人'}" Margin="0,10,0,0" Checked="Changed" Unchecked="Changed"/>
+                                <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap" Text="开会时只能根据已听到的声音判断，开头几分钟和抢话容易分错；会后会拿整场录音重新核对一遍，提升发言人准确度。"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <TextBlock Text="{local:Loc Key='词库'}" Style="{StaticResource Overline}"/>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <CheckBox x:Name="GlossaryOn" DockPanel.Dock="Right" Style="{StaticResource Switch}" Checked="Changed" Unchecked="Changed"/>
+                                    <TextBlock Text="{local:Loc Key='识别后按词库纠正'}" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <TextBlock x:Name="GlossaryHelp" Style="{StaticResource Helper}" TextWrapping="Wrap"/>
+                                <Button Content="{local:Loc Key='打开词库'}" Style="{StaticResource Btn}" HorizontalAlignment="Left" Margin="0,10,0,0" Click="Glossary_Click"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 2. AI 引擎（统一双模式：本地 CLI 桥接 / 在线云端 API） -->
+            <TabItem x:Name="AiEngineTab" Header="AI 引擎">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
+                    <StackPanel>
+                        <!-- Mode Switcher: Two Visual Cards -->
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,10">
+                                    <TextBlock DockPanel.Dock="Right" Text="随时可切换，手工工坊始终可用" FontSize="11.5" Foreground="{StaticResource Faint}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="选择纪要生成方式" Style="{StaticResource Overline}" Margin="0"/>
+                                </DockPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border x:Name="ModeCliCard" Grid.Column="0" CornerRadius="12" Padding="13,11" Cursor="Hand"
+                                            Background="#F4F8FF" BorderBrush="{StaticResource Primary}" BorderThickness="1.5"
+                                            MouseLeftButtonUp="SelectCliMode_Click">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <Border DockPanel.Dock="Right" Background="#2228CD41" CornerRadius="6" Padding="7,2" VerticalAlignment="Center">
+                                                    <TextBlock Text="免 API Key" FontSize="10.5" FontWeight="SemiBold" Foreground="#167E45"/>
+                                                </Border>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Ellipse x:Name="ModeCliDot" Width="9" Height="9" Fill="{StaticResource Primary}" Margin="0,0,7,0"/>
+                                                    <TextBlock Text="本地 CLI 桥接" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                            <TextBlock Text="复用电脑已登录的 Gemini / ChatGPT (Codex) / Claude / Antigravity 订阅" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="17"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border x:Name="ModeCloudCard" Grid.Column="2" CornerRadius="12" Padding="13,11" Cursor="Hand"
+                                            Background="#F8FAFE" BorderBrush="#1A16284C" BorderThickness="1.2"
+                                            MouseLeftButtonUp="SelectCloudMode_Click">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <Border DockPanel.Dock="Right" Background="#1A007AFF" CornerRadius="6" Padding="7,2" VerticalAlignment="Center">
+                                                    <TextBlock Text="稳定高速" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource Primary}"/>
+                                                </Border>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Ellipse x:Name="ModeCloudDot" Width="9" Height="9" Fill="#C8D0E0" Margin="0,0,7,0"/>
+                                                    <TextBlock Text="在线云端 API" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                            <TextBlock Text="填一个 API Key 直连 DeepSeek / 通义千问 / 豆包 / GPT / Gemini 总结纪要" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="17"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Panel A: Local CLI Bridge (Zero-config cards + collapsed advanced params) -->
+                        <Border x:Name="CliModePanel" Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,10">
+                                    <Button DockPanel.Dock="Right" Content="↻ 重新扫描" Style="{StaticResource GhostBtn}"
+                                            Foreground="{StaticResource Primary}" FontSize="12" Padding="8,2" Click="CliDetect_Click"/>
+                                    <TextBlock Text="本机可用的 AI CLI（点选即用，无需手填参数）" Style="{StaticResource Overline}" Margin="0" VerticalAlignment="Center"/>
+                                </DockPanel>
+
+                                <!-- 2x2 Visual CLI Tool Cards -->
+                                <UniformGrid x:Name="CliCardsGrid" Columns="2" Margin="0,0,-8,0"/>
+
+                                <!-- Install Hint Banner (shown only when clicking an uninstalled CLI card) -->
+                                <Border x:Name="CliInstallBanner" Visibility="Collapsed" Background="#FFF8EE" BorderBrush="#44E07A00"
+                                        BorderThickness="1" CornerRadius="10" Padding="12,9" Margin="0,10,0,0">
+                                    <DockPanel>
+                                        <Button x:Name="CliCopyInstallBtn" DockPanel.Dock="Right" Content="复制命令" Style="{StaticResource Btn}"
+                                                FontSize="11.5" Padding="10,4" Margin="10,0,0,0" Click="CliCopyInstall_Click"/>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock x:Name="CliInstallTitle" FontSize="12" FontWeight="SemiBold" Foreground="#9A5300"/>
+                                            <TextBlock x:Name="CliInstallCmd" FontSize="11.5" FontFamily="Consolas, Microsoft YaHei UI" Foreground="#644A24" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- Status & One-Click Connectivity Test -->
+                                <Border Background="#F2FAFF" BorderBrush="#26007AFF" BorderThickness="1" CornerRadius="11" Padding="12,9" Margin="0,12,0,0">
+                                    <DockPanel>
+                                        <Button x:Name="CliTestBtn" DockPanel.Dock="Right" Content="测试连通" Style="{StaticResource PrimaryBtn}"
+                                                Padding="14,6" Margin="10,0,0,0" Click="CliTest_Click"/>
+                                        <TextBlock x:Name="CliTestText" FontSize="12.5" Foreground="{StaticResource Muted}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- Advanced Parameters Collapsed by Default -->
+                                <Expander x:Name="CliAdvancedExpander" Margin="0,12,0,0" IsExpanded="False" Foreground="{StaticResource Muted}">
+                                    <Expander.Header>
+                                        <TextBlock Text="高级参数（命令路径、附加参数、指定模型、自定义脚本 — 一般无需修改）" FontSize="12" Foreground="{StaticResource Muted}"/>
+                                    </Expander.Header>
+                                    <StackPanel Margin="0,10,0,0">
+                                        <DockPanel Style="{StaticResource Row}">
+                                            <ComboBox x:Name="CliPresetBox" DockPanel.Dock="Right" MinWidth="260" SelectionChanged="CliPreset_Changed"/>
+                                            <TextBlock Text="CLI 预设" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <TextBlock x:Name="CliPresetHint" Style="{StaticResource Helper}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                        <DockPanel Style="{StaticResource Row}">
+                                            <TextBox x:Name="CliCmdBox" DockPanel.Dock="Right" Width="340" Style="{StaticResource Field}" LostFocus="CliText_LostFocus"/>
+                                            <TextBlock Text="命令 / 路径" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <DockPanel Style="{StaticResource Row}">
+                                            <TextBox x:Name="CliArgsBox" DockPanel.Dock="Right" Width="340" Style="{StaticResource Field}" LostFocus="CliText_LostFocus"/>
+                                            <TextBlock Text="附加参数" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <DockPanel Style="{StaticResource Row}">
+                                            <ComboBox x:Name="CliModeBox" DockPanel.Dock="Right" Width="340" SelectionChanged="CliChanged"/>
+                                            <TextBlock Text="传入方式" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <DockPanel Style="{StaticResource Row}">
+                                            <TextBox x:Name="CliModelBox" DockPanel.Dock="Right" Width="340" Style="{StaticResource Field}" LostFocus="CliText_LostFocus"/>
+                                            <TextBlock Text="指定模型（可选）" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Expander>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Panel B: Online Cloud API (Simple 3-Step Setup) -->
+                        <Border x:Name="CloudModePanel" Style="{StaticResource Panel}" Visibility="Collapsed">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,10">
+                                    <Button DockPanel.Dock="Right" Content="＋ 添加备用服务" Style="{StaticResource GhostBtn}"
+                                            Foreground="{StaticResource Primary}" FontSize="12" Padding="8,2" Click="AddProvider_Click"/>
+                                    <TextBlock Text="云端大模型配置（选平台 → 贴 API Key → 保存验证）" Style="{StaticResource Overline}" Margin="0" VerticalAlignment="Center"/>
+                                </DockPanel>
+
+                                <!-- Saved Cloud Service Selector -->
+                                <DockPanel Margin="0,0,0,10">
+                                    <Button x:Name="DeleteBtn" DockPanel.Dock="Right" Content="删除" Style="{StaticResource DeleteBtn}"
+                                            Padding="12,5" Margin="8,0,0,0" Click="DeleteProvider_Click"/>
+                                    <ComboBox x:Name="ActiveBox" SelectionChanged="Active_Changed"/>
+                                </DockPanel>
+
+                                <!-- Quick Platform Chips -->
+                                <WrapPanel x:Name="CloudQuickPresets" Margin="0,0,0,10"/>
+
+                                <!-- Minimal Form -->
+                                <StackPanel x:Name="EditorCard">
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <PasswordBox x:Name="KeyBox" DockPanel.Dock="Right" Width="360"/>
+                                        <TextBlock Text="API Key" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,-2,0,8">
+                                        <Button x:Name="KeyLink" DockPanel.Dock="Right" Content="去申请 Key ↗" Style="{StaticResource GhostBtn}" FontSize="11.5" Padding="4,1" Click="GetKey_Click"/>
+                                        <TextBlock x:Name="KeyHint" Style="{StaticResource Helper}" VerticalAlignment="Center" Margin="0"/>
+                                    </DockPanel>
+
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <ComboBox x:Name="ModelBox" IsEditable="True" Width="270" MaxDropDownHeight="360"/>
+                                            <Button x:Name="FetchBtn" Content="拉取列表" Style="{StaticResource Btn}" Padding="10,5" Margin="8,0,0,0" Click="FetchModels_Click"/>
+                                        </StackPanel>
+                                        <TextBlock Text="模型" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                    <TextBlock x:Name="ModelHint" Style="{StaticResource Helper}" Margin="0,-2,0,8"/>
+
+                                    <!-- Collapsed Base URL & Custom Service Details -->
+                                    <Expander x:Name="CloudAdvancedExpander" Margin="0,2,0,12" IsExpanded="False" Foreground="{StaticResource Muted}">
+                                        <Expander.Header>
+                                            <TextBlock x:Name="CloudAdvancedHeader" Text="接口地址与服务详情（已自动填好，自定义服务时展开）" FontSize="12" Foreground="{StaticResource Muted}"/>
+                                        </Expander.Header>
+                                        <StackPanel Margin="0,10,0,0">
+                                            <DockPanel Style="{StaticResource Row}">
+                                                <ComboBox x:Name="PresetBox" DockPanel.Dock="Right" Width="340" MaxDropDownHeight="420" SelectionChanged="Preset_Changed"/>
+                                                <TextBlock Text="完整平台列表" VerticalAlignment="Center"/>
+                                            </DockPanel>
+                                            <TextBlock x:Name="PresetHint" Style="{StaticResource Helper}" Margin="0,0,0,6"/>
+                                            <DockPanel Style="{StaticResource Row}">
+                                                <TextBox x:Name="NameBox" DockPanel.Dock="Right" Width="340" Style="{StaticResource Field}"/>
+                                                <TextBlock Text="显示名称" VerticalAlignment="Center"/>
+                                            </DockPanel>
+                                            <DockPanel Style="{StaticResource Row}">
+                                                <TextBox x:Name="UrlBox" DockPanel.Dock="Right" Width="340" Style="{StaticResource Field}"/>
+                                                <TextBlock Text="Base URL" VerticalAlignment="Center"/>
+                                            </DockPanel>
+                                        </StackPanel>
+                                    </Expander>
+
+                                    <!-- Verify Strip -->
+                                    <Border Background="#F2FAFF" BorderBrush="#26007AFF" BorderThickness="1" CornerRadius="11" Padding="12,9">
+                                        <DockPanel>
+                                            <Button x:Name="SaveBtn" DockPanel.Dock="Right" Content="保存并验证" Style="{StaticResource PrimaryBtn}"
+                                                    Padding="14,6" Margin="10,0,0,0" Click="SaveProvider_Click"/>
+                                            <TextBlock x:Name="KeyState" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                        </DockPanel>
+                                    </Border>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Shared Notes Trigger & Export Preferences (NO live notes switch!) -->
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <TextBlock Text="纪要触发与导出" Style="{StaticResource Overline}"/>
+                                <CheckBox x:Name="AutoCliEndOn" Style="{StaticResource SwitchRow}"
+                                          Content="会议结束后，自动调用当前 AI 引擎生成会议纪要" Checked="Changed" Unchecked="Changed"/>
+                                <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap"
+                                           Text="默认关闭：仅在你主界面手动点击「生成纪要 / 重新生成」时才调用 AI（不实时调用，不额外消耗云端额度）。"/>
+                                <DockPanel Style="{StaticResource Row}" Margin="0,10,0,0">
+                                    <Button DockPanel.Dock="Right" Content="模板中心" Style="{StaticResource Btn}" Margin="8,0,0,0" Click="Templates_Click"/>
+                                    <ComboBox x:Name="TemplateDefaultBox" DockPanel.Dock="Right" MinWidth="200" MaxDropDownHeight="420" SelectionChanged="Changed"/>
+                                    <TextBlock Text="默认纪要模板" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}" Margin="0,4,0,0">
+                                    <TextBox x:Name="ExportDirBox" DockPanel.Dock="Right" Width="310" Style="{StaticResource Field}" LostFocus="CliText_LostFocus"/>
+                                    <TextBlock Text="默认导出目录" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Helper}" Text="可选：填写如 D:\Work document\2026年工作\会议，导出 Word / Markdown 时自动定位到此文件夹。"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 3. 会议 -->
+            <TabItem Header="{local:Loc Key='会议'}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
+                    <StackPanel>
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <TextBlock Text="{local:Loc Key='自动结束'}" Style="{StaticResource Overline}"/>
+                                <CheckBox x:Name="FollowApps" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='会议软件挂断后，自动结束本场记录'}" Checked="Changed" Unchecked="Changed"/>
+                                <TextBlock Style="{StaticResource Helper}" Text="{local:Loc Key='识别 Zoom、Teams、腾讯会议、飞书、钉钉、Webex 等：它们不再占用麦克风，就当作会议结束。'}"/>
+                                <DockPanel Style="{StaticResource Row}" Margin="0,12,0,0">
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                        <ComboBox x:Name="SilenceMinBox" MinWidth="90" SelectionChanged="Changed"/>
+                                        <ComboBox x:Name="SilenceBox" MinWidth="130" Margin="8,0,0,0" SelectionChanged="Changed"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{local:Loc Key='没人说话超过'}" VerticalAlignment="Center"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 4. 通用 -->
+            <TabItem Header="{local:Loc Key='通用'}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
+                    <StackPanel>
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <ComboBox x:Name="UiLanguageBox" DockPanel.Dock="Right" MinWidth="210" SelectionChanged="UiLanguage_Changed"/>
+                                    <TextBlock Text="{local:Loc Key='界面语言'}" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap" Text="仅支持简体中文与 English，切换后立即生效。"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <TextBlock Text="{local:Loc Key='启动'}" Style="{StaticResource Overline}"/>
+                                <CheckBox x:Name="LoginOn" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='登录 Windows 后自动启动'}" Checked="Changed" Unchecked="Changed"/>
+                                <CheckBox x:Name="TrayStartOn" Style="{StaticResource SwitchRow}" Content="{local:Loc Key='单击通知区域图标时直接开始收听'}" Margin="0,10,0,0"
+                                          Checked="Changed" Unchecked="Changed"/>
+                                <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap"
+                                           Text="关闭时，待机状态下单击托盘图标直接显示主窗口；开启后，单击图标立即开始收听。"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <TextBlock Text="本机模型与录音存储" Style="{StaticResource Overline}"/>
+                                <Border Background="#F2FFFFFF" BorderBrush="#4428CD41" BorderThickness="1" CornerRadius="11" Padding="12,10" Margin="0,2,0,12">
+                                    <DockPanel>
+                                        <Border x:Name="AudioSizeBadge" DockPanel.Dock="Right" Background="#16007AFF" CornerRadius="10" Padding="10,4" VerticalAlignment="Center" Margin="10,0,0,0">
+                                            <TextBlock x:Name="AudioSizeBadgeText" Text="录音 0 B" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource Primary}"/>
+                                        </Border>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Ellipse x:Name="EngineStatusDot" Width="8" Height="8" Fill="{StaticResource OnAir}" VerticalAlignment="Center" Margin="0,0,9,0"/>
+                                            <StackPanel>
+                                                <TextBlock x:Name="EngineStatusTitle" Text="本地引擎就绪 · 离线可用" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
+                                                <TextBlock x:Name="ModelState" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                                <CheckBox x:Name="SaveAudioOn" Style="{StaticResource SwitchRow}" Content="保存会议原声录音（16kHz M4A 轻量压缩，支持原声回放与逐字稿联动）"
+                                          Checked="Changed" Unchecked="Changed"/>
+                                <TextBlock x:Name="AudioStorageText" Style="{StaticResource Helper}" TextWrapping="Wrap"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <Button Content="{local:Loc Key='打开数据文件夹'}" Style="{StaticResource Btn}" Click="OpenData_Click" Margin="0,0,8,0"/>
+                                    <Button x:Name="CleanAudioBtn" Content="清理全部录音（保留纪要）" Style="{StaticResource DeleteBtn}" Click="CleanAllAudio_Click" Margin="0,0,8,0"/>
+                                    <Button Content="{local:Loc Key='查看运行日志'}" Style="{StaticResource GhostBtn}" Click="OpenLog_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock x:Name="AboutText" Style="{StaticResource Helper}" Margin="2,4,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
     </Grid>
 </Window>

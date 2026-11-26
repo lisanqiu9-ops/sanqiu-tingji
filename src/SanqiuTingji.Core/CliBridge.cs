@@ -21,7 +21,8 @@ public sealed record CliBridgePreset(
     CliInputMode InputMode,
     string? ModelFlag,
     string Hint,
-    string[] SearchNames);
+    string[] SearchNames,
+    string InstallCommand = "");
 
 public sealed record CliBridgeConfig(
     bool Enabled,
@@ -49,31 +50,36 @@ public static class CliBridge
 {
     public static readonly CliBridgePreset[] Presets =
     [
-        new("agy", "Antigravity CLI (agy)", "agy",
+        new("agy", "Antigravity (agy)", "agy",
             "--disable-slash-commands --output-format text --effort low --print {prompt}",
             CliInputMode.Argument, "--model",
-            "自动调用本机已登录的 Antigravity CLI，无需 API Key。",
-            ["agy.exe", "agy.cmd", "agy"]),
-        new("codex", "OpenAI Codex CLI (codex)", "codex",
+            "使用本机已登录的 Antigravity 订阅，已自动匹配路径与参数。",
+            ["agy.exe", "agy.cmd", "agy"],
+            "请先安装并登录 Antigravity 客户端后重新扫描"),
+        new("codex", "ChatGPT / Codex CLI", "codex",
             "exec --skip-git-repo-check -",
             CliInputMode.Stdin, "-m",
-            "调用本机已登录的 Codex CLI（走 ChatGPT 订阅），从标准输入读取提示词。",
-            ["codex.exe", "codex.cmd", "codex"]),
-        new("gemini", "Google Gemini CLI (gemini)", "gemini",
+            "复用本机 ChatGPT Plus / Pro 订阅（codex），无需单独买 API。",
+            ["codex.exe", "codex.cmd", "codex"],
+            "npm i -g @openai/codex && codex"),
+        new("gemini", "Google Gemini CLI", "gemini",
             "-p \"请严格按标准输入中的任务要求输出严格 JSON，不要调用任何工具。\"",
             CliInputMode.Stdin, "-m",
-            "调用本机已登录的 Gemini CLI（走 Google 订阅），从标准输入读取完整会议内容。",
-            ["gemini.exe", "gemini.cmd", "gemini"]),
-        new("claude", "Claude Code CLI (claude)", "claude",
+            "复用 Google 账号 Gemini 免费/订阅额度（gemini）。",
+            ["gemini.exe", "gemini.cmd", "gemini"],
+            "npm i -g @google/gemini-cli && gemini"),
+        new("claude", "Claude Code CLI", "claude",
             "-p --output-format text",
             CliInputMode.Stdin, "--model",
-            "调用本机已登录的 Claude CLI，从标准输入读取提示词并直接输出文本。",
-            ["claude.exe", "claude.cmd", "claude"]),
+            "复用本机 Claude 订阅（claude），无需单独买 API。",
+            ["claude.exe", "claude.cmd", "claude"],
+            "npm i -g @anthropic-ai/claude-code && claude"),
         new("custom", "自定义本地 CLI", "",
             "",
             CliInputMode.Stdin, null,
             "任意本地命令或脚本：支持标准输入、{prompt} 命令行参数或 {prompt_file} 临时文件占位符。",
-            []),
+            [],
+            ""),
     ];
 
     public static CliBridgePreset FindPreset(string? id) =>
