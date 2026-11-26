@@ -1,91 +1,111 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using SanqiuTingji.Audio;
-using SanqiuTingji.Localization;
-using SanqiuTingji.Speech;
 using Microsoft.Win32;
+using SanqiuTingji.Localization;
 
 namespace SanqiuTingji.App;
 
+/// Lightweight non-blocking intake dialog: pick or drop one/more local media files,
+/// or paste a video link, optionally toggle speaker diarization, then hand off to
+/// the background MediaImportQueue and close immediately so the main window stays free.
 public sealed class MediaImportWindow : Window
 {
     private readonly AppModel model;
     private readonly TextBox link = new();
-    private readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap, Foreground = Theme.Grey, FontSize = 12, Margin = new(2, 14, 0, 0), Visibility = Visibility.Collapsed };
-    private readonly ProgressBar progress = new() { Minimum = 0, Maximum = 1, Height = 5, Margin = new(0, 8, 0, 0), Visibility = Visibility.Collapsed };
-    private readonly Button file = new() { Padding = new(22, 8, 22, 8), HorizontalAlignment = HorizontalAlignment.Center };
-    private readonly Button download = new() { Padding = new(16, 7, 16, 7), Margin = new(8, 0, 0, 0), IsEnabled = false };
-    private readonly Button cancel = new() { Padding = new(18, 6, 18, 6), HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 20, 0, 0) };
+    private readonly CheckBox speakersCheck = new();
+    private readonly TextBlock hintNote = new()
+    {
+        TextWrapping = TextWrapping.Wrap,
+        Foreground = Theme.Warn,
+        FontSize = 12,
+        Margin = new(2, 10, 0, 0),
+        Visibility = Visibility.Collapsed,
+    };
+    private readonly Button fileBtn = new() { Padding = new(22, 8, 22, 8), HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly Button downloadBtn = new() { Padding = new(16, 7, 16, 7), Margin = new(8, 0, 0, 0), IsEnabled = false };
+    private readonly Button closeBtn = new() { Padding = new(18, 6, 18, 6), HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 16, 0, 0) };
     private readonly Border drop = new();
     private readonly System.Windows.Shapes.Rectangle outline = new()
     {
-        Stroke = Theme.Line, StrokeThickness = 1.5, StrokeDashArray = [4, 3], RadiusX = 12, RadiusY = 12, IsHitTestVisible = false,
+        Stroke = Theme.Line,
+        StrokeThickness = 1.5,
+        StrokeDashArray = [4, 3],
+        RadiusX = 12,
+        RadiusY = 12,
+        IsHitTestVisible = false,
     };
-    private CancellationTokenSource? cancellation;
-    public string? ImportedId { get; private set; }
-
-    /// Media the recognizer can read (Media Foundation): the picker's filter and what a drop accepts.
-    private static readonly string[] Kinds = [".wav", ".mp3", ".m4a", ".mp4", ".wma", ".aac", ".flac", ".wmv", ".avi", ".mov", ".mkv", ".webm"];
 
     public MediaImportWindow(AppModel model)
     {
         this.model = model;
-        // One column: the file (what most people import) as the big target, a link below it.
-        Width = 520; SizeToContent = SizeToContent.Height; ResizeMode = ResizeMode.NoResize;
+        Width = 530;
+        SizeToContent = SizeToContent.Height;
+        ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = (System.Windows.Media.Brush)FindResource("Ground");
         Foreground = Theme.Ink;
         Icon = Icons.Mark(64, false);
+        AllowDrop = true;
         Native.ApplyLiquidGlass(this, dark: false);
         UiText.Set(this, "Title", () => $"{Brand.Name} · 导入音视频");
+
         var panel = new StackPanel { Margin = new(24, 22, 24, 20) };
         var heading = new TextBlock { FontSize = 20, FontWeight = FontWeights.SemiBold };
         UiText.Set(heading, "Text", () => L.T("导入音视频"));
         panel.Children.Add(heading);
         var sub = new TextBlock { Style = (Style)FindResource("Helper"), TextWrapping = TextWrapping.Wrap, Margin = new(0, 4, 0, 16) };
-        UiText.Set(sub, "Text", () => L.T("使用本地模型识别，完成后可生成会议纪要"));
+        sub.Text = "投放后自动转入后台识别，不挡主窗口，支持一次选择或拖入多个文件";
         panel.Children.Add(sub);
 
-        // The drop target: a dashed card that lights up while a file is dragged over it.
+        // Whole-window drop target visually anchored on the dashed card.
         var inside = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
         inside.Children.Add(new TextBlock
         {
-            Text = "\uE8B5", FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 28,
-            Foreground = Theme.Primary, HorizontalAlignment = HorizontalAlignment.Center, Margin = new(0, 0, 0, 12),
+            Text = "\uE8B5",
+            FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
+            FontSize = 28,
+            Foreground = Theme.Primary,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new(0, 0, 0, 12),
         });
-        file.Style = (Style)FindResource("PrimaryBtn");
-        UiText.Set(file, "Content", () => L.T("选择本地文件"));
-        inside.Children.Add(file);
-        var hint = new TextBlock { FontSize = 12, Foreground = Theme.Grey2, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, Margin = new(0, 10, 0, 0) };
-        UiText.Set(hint, "Text", () => L.T("也可以把文件拖到这里 · 支持 WAV、MP3、M4A、MP4、FLAC 等"));
-        inside.Children.Add(hint);
+        fileBtn.Style = (Style)FindResource("PrimaryBtn");
+        fileBtn.Content = "选择本地文件（可多选）";
+        inside.Children.Add(fileBtn);
+        var dropHint = new TextBlock
+        {
+            FontSize = 12,
+            Foreground = Theme.Grey2,
+            TextWrapping = TextWrapping.Wrap,
+            TextAlignment = TextAlignment.Center,
+            Margin = new(0, 10, 0, 0),
+            Text = "直接拖入此窗口任意位置即可 · 支持 WAV、MP3、M4A、MP4、FLAC 等",
+        };
+        inside.Children.Add(dropHint);
         drop.Child = inside;
         drop.Background = System.Windows.Media.Brushes.White;
         drop.CornerRadius = new CornerRadius(12);
         drop.Padding = new Thickness(20, 24, 20, 22);
-        drop.AllowDrop = true;
-        drop.DragEnter += (_, e) => Hover(e, true);
-        drop.DragOver += (_, e) => Hover(e, true);
-        drop.DragLeave += (_, _) => Light(false);
-        drop.Drop += async (_, e) =>
-        {
-            Light(false);
-            if (Dropped(e) is { } path) await Run(path, false);
-        };
-        // The dashed outline over the card (a Border can't dash).
+
         var target = new Grid();
         target.Children.Add(drop);
         target.Children.Add(outline);
         panel.Children.Add(target);
 
-        // Or a link.
-        var or = new Grid { Margin = new(0, 18, 0, 10) };
+        // Speed/accuracy option: speaker diarization toggle.
+        speakersCheck.IsChecked = model.Settings.SpeakerVoices;
+        speakersCheck.Margin = new Thickness(2, 14, 0, 0);
+        speakersCheck.Content = "同时区分发言人（单人录音或赶时间可取消，识别提速约 2～3 倍）";
+        speakersCheck.FontSize = 12.5;
+        speakersCheck.Foreground = Theme.Ink;
+        panel.Children.Add(speakersCheck);
+
+        // Or paste a video link.
+        var or = new Grid { Margin = new(0, 16, 0, 10) };
         or.ColumnDefinitions.Add(new ColumnDefinition());
         or.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         or.ColumnDefinitions.Add(new ColumnDefinition());
-        var orText = new TextBlock { FontSize = 12, Foreground = Theme.Grey2, Margin = new(10, 0, 10, 0) };
-        UiText.Set(orText, "Text", () => L.T("或粘贴视频链接"));
+        var orText = new TextBlock { FontSize = 12, Foreground = Theme.Grey2, Margin = new(10, 0, 10, 0), Text = "或粘贴视频链接" };
         Grid.SetColumn(orText, 1);
         foreach (var col in new[] { 0, 2 })
         {
@@ -95,39 +115,52 @@ public sealed class MediaImportWindow : Window
         }
         or.Children.Add(orText);
         panel.Children.Add(or);
+
         var linkRow = new DockPanel();
-        download.Style = (Style)FindResource("Btn");
-        UiText.Set(download, "Content", () => L.T("识别链接"));
-        DockPanel.SetDock(download, Dock.Right);
-        linkRow.Children.Add(download);
+        downloadBtn.Style = (Style)FindResource("Btn");
+        downloadBtn.Content = "加入后台识别";
+        DockPanel.SetDock(downloadBtn, Dock.Right);
+        linkRow.Children.Add(downloadBtn);
         link.Style = (Style)FindResource("Field");
-        UiText.Set(link, "Tag", () => L.T("B 站、YouTube 等视频页面的链接"));
-        link.TextChanged += (_, _) => download.IsEnabled = cancellation == null && link.Text.Trim().Length > 0;
-        link.KeyDown += async (_, e) => { if (e.Key == System.Windows.Input.Key.Enter && download.IsEnabled) await Run(link.Text.Trim(), true); };
+        link.Tag = "B 站、YouTube 等视频页面的链接";
+        link.TextChanged += (_, _) => downloadBtn.IsEnabled = link.Text.Trim().Length > 0;
+        link.KeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Enter && downloadBtn.IsEnabled) SubmitLink();
+        };
         linkRow.Children.Add(link);
         panel.Children.Add(linkRow);
 
-        panel.Children.Add(status);
-        panel.Children.Add(progress);
-        cancel.Style = (Style)FindResource("Btn");
-        UiText.Set(cancel, "Content", () => L.T("关闭"));
-        panel.Children.Add(cancel);
+        panel.Children.Add(hintNote);
+
+        closeBtn.Style = (Style)FindResource("Btn");
+        closeBtn.Content = "关闭";
+        closeBtn.Click += (_, _) => Close();
+        panel.Children.Add(closeBtn);
+
         Content = new Border
         {
             Background = (System.Windows.Media.Brush)FindResource("SecondaryGlassBg"),
             Child = panel,
         };
-        file.Click += async (_, _) =>
+
+        // Window-level preview drag events so dragging anywhere on the window works reliably.
+        PreviewDragEnter += (_, e) => HandleDragHover(e, true);
+        PreviewDragOver += (_, e) => HandleDragHover(e, true);
+        PreviewDragLeave += (_, _) => Light(false);
+        PreviewDrop += (_, e) => HandleDrop(e);
+
+        fileBtn.Click += (_, _) =>
         {
             var picker = new OpenFileDialog
             {
-                Filter = L.T("音视频文件") + "|" + string.Join(";", Kinds.Select(k => "*" + k)) + "|" + L.T("所有文件") + "|*.*"
+                Multiselect = true,
+                Filter = L.T("音视频文件") + "|" + string.Join(";", MediaImportQueue.SupportedExtensions.Select(k => "*" + k)) + "|" + L.T("所有文件") + "|*.*",
             };
-            if (picker.ShowDialog(this) == true) await Run(picker.FileName, false);
+            if (picker.ShowDialog(this) == true && picker.FileNames.Length > 0)
+                SubmitFiles(picker.FileNames);
         };
-        download.Click += async (_, _) => await Run(link.Text.Trim(), true);
-        cancel.Click += (_, _) => { if (cancellation != null) cancellation.Cancel(); else Close(); };
-        Closing += (_, e) => { if (cancellation != null) { e.Cancel = true; cancellation.Cancel(); } };
+        downloadBtn.Click += (_, _) => SubmitLink();
     }
 
     private void Light(bool on)
@@ -136,81 +169,63 @@ public sealed class MediaImportWindow : Window
         outline.Stroke = on ? Theme.Primary : Theme.Line;
     }
 
-    private void Hover(DragEventArgs e, bool on)
+    private static List<string> ExtractDroppedFiles(DragEventArgs e)
     {
-        var ok = cancellation == null && Dropped(e) != null;
-        e.Effects = ok ? DragDropEffects.Copy : DragDropEffects.None;
-        e.Handled = true;
-        Light(ok && on);
+        if (e.Data.GetDataPresent(DataFormats.FileDrop) && e.Data.GetData(DataFormats.FileDrop) is string[] files)
+            return MediaImportQueue.FilterSupportedFiles(files);
+        return [];
     }
 
-    /// The one media file being dropped, or null.
-    private static string? Dropped(DragEventArgs e) =>
-        e.Data.GetData(DataFormats.FileDrop) is string[] { Length: 1 } files && File.Exists(files[0])
-        && Kinds.Contains(Path.GetExtension(files[0]).ToLowerInvariant()) ? files[0] : null;
-
-    private async Task Run(string input, bool remote)
+    private void HandleDragHover(DragEventArgs e, bool on)
     {
-        if (cancellation != null) return;
-        cancellation = new();
-        var token = cancellation.Token;
-        file.IsEnabled = download.IsEnabled = link.IsEnabled = false;
-        status.Visibility = Visibility.Visible;
-        drop.AllowDrop = false;
-        UiText.Set(cancel, "Content", () => L.T("取消"));
-        progress.IsIndeterminate = true;
-        progress.Visibility = Visibility.Visible;
-        progress.Value = 0;
-        string? directory = null;
-        try
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+        var valid = ExtractDroppedFiles(e);
+        e.Effects = valid.Count > 0 ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+        Light(on && valid.Count > 0);
+        if (valid.Count == 0)
         {
-            UiText.Set(status, "Text", () => L.T("正在准备识别模型…"));
-            if (!await model.EnsureEngines()) throw new InvalidOperationException(L.T("请先完成识别模型下载"));
-            token.ThrowIfCancellationRequested();
-            var path = input;
-            string? title = null;
-            if (remote)
-            {
-                UiText.Set(status, "Text", () => L.T("正在下载音轨，首次使用会下载 yt-dlp…"));
-                directory = Path.Combine(Path.GetTempPath(), "SanqiuTingji-import-" + Guid.NewGuid().ToString("N"));
-                var downloaded = await VideoDownload.Download(input, directory, token);
-                path = downloaded.Path;
-                title = downloaded.Title;
-            }
-            UiText.Set(status, "Text", () => L.T("正在识别音轨…"));
-            progress.IsIndeterminate = false;
-            var reporter = new Progress<double>(value => progress.Value = value);
-            var session = await Task.Run(() => MediaImport.Recognize(path, model.Recognizer!, model.Models,
-                model.Settings.SpeakerVoices, reporter, token));
-            if (title != null) session.Title = title;
-            session.TemplateId = model.Settings.DefaultTemplateId;
-            token.ThrowIfCancellationRequested();
-            ImportedId = await Task.Run(() => model.Store.Import(session));
-            if (ImportedId != null && model.Settings.SaveMeetingAudio)
-            {
-                UiText.Set(status, "Text", () => "正在保存压缩录音（M4A）…");
-                var importedId = ImportedId;
-                await Task.Run(() => MeetingAudioStore.SaveFromMediaFile(model.Store, importedId, path));
-            }
+            hintNote.Text = "不支持该文件格式，请拖入 WAV / MP3 / M4A / MP4 / FLAC / MKV 等音视频文件。";
+            hintNote.Visibility = Visibility.Visible;
         }
-        catch (OperationCanceledException) { UiText.Set(status, "Text", () => L.T("已取消导入")); }
-        catch (Exception error)
+        else
         {
-            Log.Debug($"import: failed {error.GetType().Name}");
-            // Decoder failures may include a private file path. Keep that out of the debug log.
-            UiText.Set(status, "Text", () => L.T("导入失败") + " · " + error.Message);
+            hintNote.Visibility = Visibility.Collapsed;
         }
-        finally
+    }
+
+    private void HandleDrop(DragEventArgs e)
+    {
+        Light(false);
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+        e.Handled = true;
+        var valid = ExtractDroppedFiles(e);
+        if (valid.Count == 0)
         {
-            if (directory != null) { try { Directory.Delete(directory, true); } catch { } }
-            cancellation.Dispose(); cancellation = null;
-            file.IsEnabled = link.IsEnabled = true;
-            download.IsEnabled = link.Text.Trim().Length > 0;
-            drop.AllowDrop = true;
-            progress.IsIndeterminate = false;
-            progress.Visibility = Visibility.Collapsed;
-            UiText.Set(cancel, "Content", () => L.T("关闭"));
+            hintNote.Text = "未识别到可导入的音视频文件（支持 WAV、MP3、M4A、MP4、FLAC、MOV、MKV 等）。";
+            hintNote.Visibility = Visibility.Visible;
+            return;
         }
-        if (ImportedId != null) { DialogResult = true; }
+        SubmitFiles(valid);
+    }
+
+    private void SubmitFiles(IEnumerable<string> paths)
+    {
+        var added = model.Imports.EnqueueFiles(paths, speakersCheck.IsChecked == true);
+        if (added == 0)
+        {
+            hintNote.Text = "所选文件不在支持的音视频格式范围内。";
+            hintNote.Visibility = Visibility.Visible;
+            return;
+        }
+        DialogResult = true;
+        Close();
+    }
+
+    private void SubmitLink()
+    {
+        if (!model.Imports.EnqueueLink(link.Text, speakersCheck.IsChecked == true)) return;
+        DialogResult = true;
+        Close();
     }
 }

@@ -32,4 +32,29 @@ public sealed partial class SessionStore
         Changed?.Invoke();
         return copy.Id;
     }
+
+    /// Creates a placeholder session for an audio recording recovered after an unexpected app crash.
+    public string CreateRecoveredAudioSession(string preferredId, string title, DateTime startedAt, double durationSeconds)
+    {
+        var id = string.IsNullOrWhiteSpace(preferredId) ? Guid.NewGuid().ToString("N") : preferredId;
+        Session session;
+        lock (gate)
+        {
+            if (sessions.FirstOrDefault(x => x.Id == id) is { } existing) return existing.Id;
+            session = new Session
+            {
+                Id = id,
+                Title = title,
+                Renamed = true,
+                StartedAt = startedAt.ToUniversalTime(),
+                EndedAt = startedAt.ToUniversalTime().AddSeconds(Math.Max(1, durationSeconds)),
+                HasAudio = true,
+            };
+            sessions.Add(session);
+            sessions.Sort((a, b) => b.StartedAt.CompareTo(a.StartedAt));
+        }
+        SaveNow(session.Id);
+        Changed?.Invoke();
+        return session.Id;
+    }
 }

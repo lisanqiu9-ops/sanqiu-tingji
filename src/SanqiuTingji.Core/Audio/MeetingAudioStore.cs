@@ -334,4 +334,147 @@ public static class MeetingAudioStore
             return (bars, TimeSpan.Zero);
         }
     }
+
+    public sealed record RecoveryReport(int RecoveredCount, List<string> SessionIds);
+
+    /// Repairs a PCM WAV file whose RIFF/data chunk sizes stayed 0 because the process crashed before Dispose().
+    /// Returns true if the file holds at least 0.5 s of valid audio (16 kHz 16-bit mono = 16000 bytes).
+    public static bool RepairTruncatedWavHeader(string wavPath)
+    {
+        if (!File.Exists(wavPath)) return false;
+        try
+        {
+            using var fs = new FileStream(wavPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            var len = fs.Length;
+            if (len < 44) return false;
+
+            var probe = new byte[(int)Math.Min(len, 4096)];
+            var read = fs.Read(probe, 0, probe.Length);
+            if (read < 44) return false;
+            if (probe[0] != 'R' || probe[1] != 'I' || probe[2] != 'F' || probe[3] != 'F'
+                || probe[8] != 'W' || probe[9] != 'A' || probe[10] != 'V' || probe[11] != 'E')
+                return false;
+
+            // Locate the "data" subchunk header (usually at byte 36 for standard PCM).
+            var dataOffset = -1;
+            var pos = 12;
+            while (pos + 8 <= read)
+            {
+                if (probe[pos] == 'd' && probe[pos + 1] == 'a' && probe[pos + 2] == 't' && probe[pos + 3] == 'a')
+                {
+                    dataOffset = pos;
+                    break;
+                }
+                var subSize = BitConverter.ToInt32(probe, pos + 4);
+                if (subSize < 0 || pos + 8L + subSize > read) break;
+                pos += 8 + subSize + (subSize & 1);
+            }
+            if (dataOffset < 0) return false;
+
+            var payloadStart = dataOffset + 8L;
+            var rawDataLen = len - payloadStart;
+            rawDataLen -= rawDataLen & 1; // align to 16-bit sample boundary
+            if (rawDataLen < 16000) return false; // less than ~0.5 s of 16 kHz mono PCM
+
+            var expectedRiff = (uint)Math.Min(uint.MaxValue, payloadStart + rawDataLen - 8);
+            var expectedData = (uint)Math.Min(uint.MaxValue, rawDataLen);
+            var currentRiff = BitConverter.ToUInt32(probe, 4);
+            var currentData = BitConverter.ToUInt32(probe, dataOffset + 4);
+
+            if (currentRiff != expectedRiff || currentData != expectedData)
+            {
+                fs.Position = 4;
+                fs.Write(BitConverter.GetBytes(expectedRiff), 0, 4);
+                fs.Position = dataOffset + 4;
+                fs.Write(BitConverter.GetBytes(expectedData), 0, 4);
+                fs.Flush(flushToDisk: true);
+            }
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log.Debug($"audio store: wav header repair failed ({wavPath}): {e.Message}");
+            return false;
+        }
+    }
+
+    /// Scans the temporary recordings folder on startup and recovers any unfinalized WAV files left by a crash.
+    public static RecoveryReport RecoverInterruptedRecordings(SessionStore store, string recordingsDir)
+    {
+        var recoveredIds = new List<string>();
+        if (!Directory.Exists(recordingsDir)) return new RecoveryReport(0, recoveredIds);
+
+        var groups = new Dictionary<string, (string? Pc, string? Mic)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var file in Directory.EnumerateFiles(recordingsDir, "*.wav"))
+        {
+            var stem = Path.GetFileNameWithoutExtension(file);
+            var isMic = stem.EndsWith("-mic", StringComparison.OrdinalIgnoreCase);
+            var sessionId = isMic ? stem[..^4] : stem;
+            if (string.IsNullOrWhiteSpace(sessionId)) continue;
+            groups.TryGetValue(sessionId, out var pair);
+            groups[sessionId] = isMic ? (pair.Pc, file) : (file, pair.Mic);
+        }
+
+        foreach (var (sessionId, pair) in groups)
+        {
+            var validPaths = new List<string>();
+            var allPaths = new[] { pair.Pc, pair.Mic }.Where(p => p != null).Select(p => p!).ToList();
+            try
+            {
+                foreach (var p in allPaths)
+                {
+                    if (RepairTruncatedWavHeader(p)) validPaths.Add(p);
+                }
+
+                if (validPaths.Count == 0) continue;
+
+                // Already has saved audio? Just clean up the stale temporary WAV files.
+                if (store.Get(sessionId) != null && FindAudioPath(store, sessionId) != null)
+                    continue;
+
+                var targetId = sessionId;
+                if (store.Get(targetId) == null)
+                {
+                    double durationSec = 0;
+                    var startedAt = DateTime.UtcNow;
+                    try
+                    {
+                        using var reader = new WaveFileReader(validPaths[0]);
+                        durationSec = reader.TotalTime.TotalSeconds;
+                        startedAt = File.GetCreationTimeUtc(validPaths[0]);
+                    }
+                    catch { }
+                    var local = startedAt.ToLocalTime();
+                    var title = $"[已恢复] 异常中断录音 {local:M月d日 HH:mm}";
+                    targetId = store.CreateRecoveredAudioSession(targetId, title, startedAt, durationSec);
+                }
+
+                if (SaveFromChannels(store, targetId, validPaths.ToArray()))
+                {
+                    recoveredIds.Add(targetId);
+                    Log.Debug($"audio store: recovered crash recording for session {targetId}");
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Debug($"audio store: recover failed for {sessionId}: {e.Message}");
+            }
+            finally
+            {
+                foreach (var p in allPaths)
+                {
+                    try { if (File.Exists(p)) File.Delete(p); } catch { }
+                }
+            }
+        }
+
+        try
+        {
+            if (Directory.Exists(recordingsDir) && !Directory.EnumerateFileSystemEntries(recordingsDir).Any())
+                Directory.Delete(recordingsDir, false);
+        }
+        catch { }
+
+        return new RecoveryReport(recoveredIds.Count, recoveredIds);
+    }
 }

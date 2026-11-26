@@ -36,11 +36,13 @@ public sealed record Recognized(string Text, string Lang, string[]? Tokens = nul
 public sealed class Recognizer : IDisposable
 {
     public const int SampleRate = 16000;
+    public static int DefaultThreads => Math.Clamp(Environment.ProcessorCount / 2, 4, 8);
     private readonly OfflineRecognizer recognizer;
     private readonly object gate = new();
 
-    public Recognizer(ModelStore models, int threads = 4)
+    public Recognizer(ModelStore models, int? threads = null)
     {
+        var numThreads = threads is > 0 ? threads.Value : DefaultThreads;
         var config = new OfflineRecognizerConfig();
         config.FeatConfig.SampleRate = SampleRate;
         config.FeatConfig.FeatureDim = 80;
@@ -48,7 +50,7 @@ public sealed class Recognizer : IDisposable
         config.ModelConfig.SenseVoice.Language = "auto";
         config.ModelConfig.SenseVoice.UseInverseTextNormalization = 1;
         config.ModelConfig.Tokens = models.SenseVoiceTokens;
-        config.ModelConfig.NumThreads = threads;
+        config.ModelConfig.NumThreads = numThreads;
         config.ModelConfig.Provider = "cpu";
         config.ModelConfig.Debug = 0;
         config.DecodingMethod = "greedy_search";

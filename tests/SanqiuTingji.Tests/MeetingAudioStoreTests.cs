@@ -72,4 +72,100 @@ public sealed class MeetingAudioStoreTests : IDisposable
         Assert.InRange(mono8[1], 0.49f, 0.50f);
         Assert.Equal(-1f, mono8[2], 4);
     }
+
+    private static void SimulateCrashZeroHeaderSizes(string wavPath)
+    {
+        var bytes = File.ReadAllBytes(wavPath);
+        // Zero RIFF size (offset 4) and the 4-byte size right after the "data" chunk tag.
+        Array.Clear(bytes, 4, 4);
+        var dataIdx = -1;
+        for (var i = 12; i + 8 <= Math.Min(bytes.Length, 256); i++)
+        {
+            if (bytes[i] == 'd' && bytes[i + 1] == 'a' && bytes[i + 2] == 't' && bytes[i + 3] == 'a')
+            {
+                dataIdx = i;
+                break;
+            }
+        }
+        Assert.True(dataIdx >= 36, "Expected a 'data' chunk header in generated WAV");
+        Array.Clear(bytes, dataIdx + 4, 4);
+        File.WriteAllBytes(wavPath, bytes);
+    }
+
+    [Fact]
+    public void RepairsTruncatedWavHeaderLeftByCrash()
+    {
+        Directory.CreateDirectory(root);
+        var wav = Path.Combine(root, "crashed.wav");
+        using (var writer = new NAudio.Wave.WaveFileWriter(wav, new NAudio.Wave.WaveFormat(16000, 16, 1)))
+        {
+            var pcm = new byte[16000 * 2]; // 1 second of 16 kHz mono PCM
+            for (var i = 0; i < 16000; i++)
+            {
+                var v = (short)(8000 * Math.Sin(2 * Math.PI * 440 * i / 16000.0));
+                pcm[2 * i] = (byte)v;
+                pcm[2 * i + 1] = (byte)(v >> 8);
+            }
+            writer.Write(pcm, 0, pcm.Length);
+        }
+
+        // Simulate a crash before Dispose(): zero out RIFF chunk size and data chunk size.
+        SimulateCrashZeroHeaderSizes(wav);
+
+        Assert.True(MeetingAudioStore.RepairTruncatedWavHeader(wav));
+        using var reader = new NAudio.Wave.WaveFileReader(wav);
+        Assert.InRange(reader.TotalTime.TotalSeconds, 0.99, 1.01);
+    }
+
+    [Fact]
+    public void RecoversInterruptedRecordingsForExistingAndMissingSessions()
+    {
+        var store = new SessionStore(Path.Combine(root, "Sessions"));
+        var existing = store.Begin();
+        store.Mutate(existing.Id, x => x.Lines.Add(new TranscriptLine { Id = "l1", T = 1.0, Src = "崩前已保存的逐字稿" }));
+        store.End();
+
+        var recDir = Path.Combine(root, "Recordings");
+        Directory.CreateDirectory(recDir);
+
+        static void WriteUnfinalizedWav(string path, int seconds)
+        {
+            using (var writer = new NAudio.Wave.WaveFileWriter(path, new NAudio.Wave.WaveFormat(16000, 16, 1)))
+            {
+                var pcm = new byte[16000 * 2 * seconds];
+                for (var i = 0; i < 16000 * seconds; i++)
+                {
+                    var v = (short)(6000 * Math.Sin(2 * Math.PI * 330 * i / 16000.0));
+                    pcm[2 * i] = (byte)v;
+                    pcm[2 * i + 1] = (byte)(v >> 8);
+                }
+                writer.Write(pcm, 0, pcm.Length);
+            }
+            SimulateCrashZeroHeaderSizes(path);
+        }
+
+        // Case 1: Existing session missing its audio.m4a
+        WriteUnfinalizedWav(Path.Combine(recDir, existing.Id + ".wav"), 1);
+        // Case 2: Crash before session.json was ever written (orphan recording)
+        const string orphanId = "20261126-143000";
+        WriteUnfinalizedWav(Path.Combine(recDir, orphanId + ".wav"), 1);
+
+        var report = MeetingAudioStore.RecoverInterruptedRecordings(store, recDir);
+        Assert.Equal(2, report.RecoveredCount);
+        Assert.True(store.Get(existing.Id)!.HasAudio);
+        Assert.NotNull(MeetingAudioStore.FindAudioPath(store, existing.Id));
+
+        var orphan = store.Get(orphanId);
+        Assert.NotNull(orphan);
+        Assert.Contains("已恢复", orphan!.Title);
+        Assert.True(orphan.HasAudio);
+        Assert.NotNull(MeetingAudioStore.FindAudioPath(store, orphanId));
+        Assert.False(Directory.Exists(recDir));
+    }
+
+    [Fact]
+    public void RecognizerDefaultThreadsStaysWithinSafeBounds()
+    {
+        Assert.InRange(SanqiuTingji.Speech.Recognizer.DefaultThreads, 4, 8);
+    }
 }

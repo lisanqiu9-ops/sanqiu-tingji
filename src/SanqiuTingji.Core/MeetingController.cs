@@ -34,6 +34,7 @@ public sealed class MeetingController
     private readonly NAudio.Wave.WaveFileWriter?[] recording = new NAudio.Wave.WaveFileWriter?[2];
     private readonly string?[] recordingPath = new string?[2];
     private readonly object recordingGate = new();
+    private long lastRecordingFlushTicks;
     /// Lines heard on the microphone in this meeting (by id): the after-meeting check runs them
     /// against the microphone's recording, the rest against the PC's.
     private readonly HashSet<string> micLines = [];
@@ -199,6 +200,16 @@ public sealed class MeetingController
                 bytes[2 * i + 1] = (byte)(v >> 8);
             }
             writer.Write(bytes, 0, bytes.Length);
+            // Flush PCM buffers to disk every 5 s so a crash or power cut keeps the recording intact.
+            var now = Environment.TickCount64;
+            if (now - lastRecordingFlushTicks >= 5000)
+            {
+                lastRecordingFlushTicks = now;
+                for (var ch = 0; ch < 2; ch++)
+                {
+                    try { recording[ch]?.Flush(); } catch { }
+                }
+            }
         }
     }
 

@@ -4,7 +4,9 @@
         xmlns:local="clr-namespace:SanqiuTingji.App"
         Foreground="#141824" FontFamily="Microsoft YaHei UI, Segoe UI"
         Title="三秋听记 · 会议记录" Width="1340" Height="860" MinWidth="820" MinHeight="520"
-        WindowStyle="None" Background="#EAF0FA" WindowStartupLocation="CenterScreen">
+        WindowStyle="None" Background="#EAF0FA" WindowStartupLocation="CenterScreen"
+        AllowDrop="True" PreviewDragEnter="MainWindow_DragEnter" PreviewDragOver="MainWindow_DragOver"
+        PreviewDragLeave="MainWindow_DragLeave" PreviewDrop="MainWindow_Drop">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="46" GlassFrameThickness="0" CornerRadius="16" ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
@@ -112,6 +114,32 @@
                                 <RadioButton x:Name="ArchivedScope" Content="{local:Loc Key='已归档'}" Tag="2" GroupName="archiveScope" Style="{StaticResource LiquidSegItem}" FontSize="11.5" Checked="LibraryScope_Checked" ToolTip="{local:Loc Key='仅看归档'}"/>
                             </UniformGrid>
                         </Grid>
+                    </Border>
+
+                    <!-- Non-blocking Background Media Import Task Card (auto-hides when idle) -->
+                    <Border x:Name="ImportTaskCard" Visibility="Collapsed" Margin="0,12,0,0" CornerRadius="12" Padding="11,9"
+                            Background="#EEF6FF" BorderBrush="#40007AFF" BorderThickness="1">
+                        <StackPanel>
+                            <DockPanel>
+                                <Button x:Name="ImportCancelBtn" DockPanel.Dock="Right" Content="&#xE711;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                        FontSize="9.5" Style="{StaticResource GhostBtn}" Foreground="{StaticResource Muted}" Padding="4" Width="20" Height="20"
+                                        ToolTip="取消当前导入任务" Click="CancelImport_Click"/>
+                                <Border x:Name="ImportQueueBadge" DockPanel.Dock="Right" Visibility="Collapsed" Background="#1F007AFF" CornerRadius="6"
+                                        Padding="6,1" Margin="4,0,4,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="ImportQueueBadgeText" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource Primary}"/>
+                                </Border>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse Width="7" Height="7" Fill="{StaticResource Primary}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                    <TextBlock x:Name="ImportTaskTitle" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Ink}"
+                                               TextTrimming="CharacterEllipsis" MaxWidth="158"/>
+                                </StackPanel>
+                            </DockPanel>
+                            <ProgressBar x:Name="ImportTaskBar" Minimum="0" Maximum="1" Height="4" Margin="0,7,0,0"/>
+                            <TextBlock x:Name="ImportTaskStage" FontSize="11" Foreground="{StaticResource Primary}" FontWeight="Medium"
+                                       Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="ImportTaskDetail" FontSize="10.5" Foreground="{StaticResource Muted}"
+                                       Margin="0,2,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
                     </Border>
 
                     <DockPanel Margin="4,14,0,0">
@@ -633,6 +661,27 @@
                     </Border>
                 </Grid>
             </Grid>
+        </Border>
+
+        <!-- Global Liquid-Glass Drag & Drop Overlay (allows dropping media anywhere onto the window) -->
+        <Border x:Name="DropOverlay" Grid.ColumnSpan="2" Visibility="Collapsed" IsHitTestVisible="False"
+                Background="#B8EAF2FF" Margin="10" CornerRadius="20" BorderBrush="{StaticResource Primary}" BorderThickness="2">
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center" Background="#F5FFFFFF" BorderBrush="#40007AFF"
+                    BorderThickness="1.5" CornerRadius="18" Padding="36,28">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="28" ShadowDepth="8" Direction="270" Opacity="0.16" Color="#0A2250"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <Border Width="54" Height="54" CornerRadius="16" Background="#18007AFF" HorizontalAlignment="Center" Margin="0,0,0,14">
+                        <TextBlock Text="&#xE8B5;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="24"
+                                   Foreground="{StaticResource Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock x:Name="DropOverlayTitle" Text="松开鼠标，立即后台导入识别" FontSize="18" FontWeight="SemiBold"
+                               Foreground="{StaticResource Ink}" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="DropOverlaySub" Text="支持单个或多个音视频文件（WAV / MP3 / M4A / MP4 / FLAC 等），不阻塞当前浏览"
+                               FontSize="12.5" Foreground="{StaticResource Muted}" Margin="0,7,0,0" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
         </Border>
     </Grid>
 </Window>

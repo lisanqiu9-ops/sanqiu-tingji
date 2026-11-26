@@ -57,6 +57,7 @@ public partial class MainWindow : Window
         cliDoneTimer.Tick += (_, _) => HideCliDoneBanner();
         toastTimer.Tick += (_, _) => HideGlassToast();
         InitAudioPlayback();
+        InitMediaImport();
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.F && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
@@ -66,7 +67,7 @@ public partial class MainWindow : Window
                 e.Handled = true;
             }
         };
-        Closed += (_, _) => { DisposeAudioPlayback(); searchTimer.Stop(); listTimer.Stop(); cliTickTimer.Stop(); cliDoneTimer.Stop(); toastTimer.Stop(); StopCliMotion(); };
+        Closed += (_, _) => { DisposeAudioPlayback(); DisposeMediaImport(); searchTimer.Stop(); listTimer.Stop(); cliTickTimer.Stop(); cliDoneTimer.Stop(); toastTimer.Stop(); StopCliMotion(); };
         StateChanged += (_, _) =>
         {
             UpdateMaximizeChrome();

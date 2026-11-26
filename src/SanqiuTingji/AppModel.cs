@@ -30,6 +30,8 @@ public sealed class AppModel
     public List<NoteTemplate> MyTemplates { get; } = NoteTemplates.LoadMine();
     /// The user's glossary: recognition is corrected against it, translations and notes follow it.
     public Glossary Glossary { get; } = new();
+    /// Background media import queue (non-blocking, multi-file, with async audio compression).
+    public MediaImportQueue Imports { get; }
 
     public IReadOnlyList<NoteTemplate> Templates => NoteTemplates.All(MyTemplates);
 
@@ -189,10 +191,16 @@ public sealed class AppModel
     public AppModel(bool preview = false)
     {
         L.SetLanguage(Settings.UiLanguage);
-        // A recording kept for the after-meeting check outlives the app only if it crashed: drop it.
-        if (!preview)
+        Imports = new MediaImportQueue(this, ui);
+        // Recover any unfinalized PCM recordings left behind if the previous run crashed or lost power.
+        if (!preview && System.IO.Directory.Exists(Paths.Recordings))
         {
-            try { if (System.IO.Directory.Exists(Paths.Recordings)) System.IO.Directory.Delete(Paths.Recordings, true); } catch { }
+            _ = Task.Run(() =>
+            {
+                var report = MeetingAudioStore.RecoverInterruptedRecordings(Store, Paths.Recordings);
+                if (report.RecoveredCount > 0)
+                    Ui(() => Toast?.Invoke($"已自动恢复 {report.RecoveredCount} 场异常中断会议的原始录音"));
+            });
         }
         Ai.Provider = Settings.ActiveProvider;
         Ai.Refresh();
@@ -523,6 +531,7 @@ public sealed class AppModel
 
     public void Shutdown()
     {
+        Imports.CancelAll();
         CancelCliNotes();
         if (IsListening) Meeting!.Stop();
         Store.Flush();
