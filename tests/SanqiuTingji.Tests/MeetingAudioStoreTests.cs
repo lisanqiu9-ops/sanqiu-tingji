@@ -43,4 +43,33 @@ public sealed class MeetingAudioStoreTests : IDisposable
         Assert.Single(after.Lines);
         Assert.Equal("保留纪要摘要", after.Notes?.Summary);
     }
+
+    [Fact]
+    public void ResamplerDecodes24BitAnd8BitPcmCorrectly()
+    {
+        // 24-bit signed little-endian PCM (e.g., Apple Lossless ALAC voice memo at 48 kHz mono)
+        var fmt24 = new NAudio.Wave.WaveFormat(48000, 24, 1);
+        byte[] raw24 =
+        [
+            0x00, 0x00, 0x00,       // 0.0
+            0xFF, 0xFF, 0x7F,       // +max (~ +1.0)
+            0x00, 0x00, 0x80,       // -min (-1.0)
+            0x00, 0x00, 0x40,       // +0.5
+        ];
+        var mono24 = Resampler.ToMonoFloat(raw24, raw24.Length, fmt24);
+        Assert.Equal(4, mono24.Length);
+        Assert.Equal(0f, mono24[0], 5);
+        Assert.InRange(mono24[1], 0.9999f, 1.0f);
+        Assert.Equal(-1f, mono24[2], 5);
+        Assert.Equal(0.5f, mono24[3], 5);
+
+        // 8-bit unsigned PCM stereo
+        var fmt8 = new NAudio.Wave.WaveFormat(16000, 8, 2);
+        byte[] raw8 = [128, 128, 255, 128, 0, 0];
+        var mono8 = Resampler.ToMonoFloat(raw8, raw8.Length, fmt8);
+        Assert.Equal(3, mono8.Length);
+        Assert.Equal(0f, mono8[0], 4);
+        Assert.InRange(mono8[1], 0.49f, 0.50f);
+        Assert.Equal(-1f, mono8[2], 4);
+    }
 }

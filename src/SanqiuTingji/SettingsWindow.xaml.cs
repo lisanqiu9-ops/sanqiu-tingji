@@ -56,20 +56,24 @@ public partial class SettingsWindow : Window
         Fill(SilenceMinBox, new[] { 5, 10, 15, 30 }.Select(m => (m.ToString(), L.F("{0} 分钟", m))).ToArray(), s.SilenceMinutes.ToString());
         LoginOn.IsChecked = s.LaunchAtLogin;
         TrayStartOn.IsChecked = s.TrayClickStarts;
+        AutoUpdateOn.IsChecked = s.AutoUpdateEnabled;
         UiText.Set(AboutText, "Text", () => L.T("语音识别与发言人区分都在本机完成。开源组件与许可见安装目录里的 NOTICE。"));
 
         model.Ai.Changed += () => Dispatcher.BeginInvoke(RenderKey);
+        App.Updates.Changed += OnUpdatesChanged;
+        Closed += (_, _) => App.Updates.Changed -= OnUpdatesChanged;
         model.StateChanged += () =>
         {
             if (!TemplateDefaultBox.IsDropDownOpen) FillTemplates();
         };
-        Activated += (_, _) => { _ = RefreshDevices(); RenderModels(); };
+        Activated += (_, _) => { _ = RefreshDevices(); RenderModels(); RenderUpdates(); };
         RenderAiModeUI();
         RenderProviders();
         RenderKey();
         RenderCliBridge();
         _ = RefreshDevices();
         RenderModels();
+        RenderUpdates();
         loading = false;
     }
 
@@ -132,12 +136,15 @@ public partial class SettingsWindow : Window
         s.SilenceEnd = Enum.TryParse<MeetingEndWatch.Silence>(TagOf(SilenceBox), out var sil) ? sil : MeetingEndWatch.Silence.Prompt;
         s.SilenceMinutes = int.TryParse(TagOf(SilenceMinBox), out var m) ? m : 10;
         s.TrayClickStarts = TrayStartOn.IsChecked == true;
+        var autoUpdateChanged = s.AutoUpdateEnabled != (AutoUpdateOn.IsChecked == true);
+        s.AutoUpdateEnabled = AutoUpdateOn.IsChecked == true;
         if (s.LaunchAtLogin != (LoginOn.IsChecked == true))
         {
             s.LaunchAtLogin = LoginOn.IsChecked == true;
             Native.SetLaunchAtLogin(s.LaunchAtLogin);
         }
         model.SaveSettings();
+        if (autoUpdateChanged) ((App)Application.Current).SyncAutoUpdateChecks();
         if (oldCapturable != s.HideFromCaptures) ((App)Application.Current).SwitchDisplay();
     }
 
@@ -561,6 +568,58 @@ public partial class SettingsWindow : Window
     private void OpenData_Click(object sender, RoutedEventArgs e) => Native.Open(Paths.Roaming);
 
     private void OpenLog_Click(object sender, RoutedEventArgs e) => Native.Open(Paths.DebugLog);
+
+    private void OnUpdatesChanged() => Dispatcher.BeginInvoke(RenderUpdates);
+
+    private void RenderUpdates()
+    {
+        var u = App.Updates;
+        VersionText.Text = $"{Brand.Name} v{u.Version}";
+        InstallKindText.Text = u.Installed ? "可自动更新" : "开发版";
+        InstallKindBadge.Background = u.Installed
+            ? new SolidColorBrush(Color.FromArgb(0x1E, 0x28, 0xCD, 0x41))
+            : new SolidColorBrush(Color.FromArgb(0x16, 0x16, 0x28, 0x4C));
+        InstallKindText.Foreground = u.Installed
+            ? new SolidColorBrush(Color.FromRgb(0x16, 0x7E, 0x45))
+            : Theme.Grey;
+
+        if (!string.IsNullOrWhiteSpace(u.Status))
+        {
+            UpdateStatusText.Text = u.Status;
+            UpdateStatusText.Foreground = u.AvailableVersion != null ? Theme.Primary
+                : u.Status.Contains("失败") ? Theme.Warn : Theme.Grey;
+        }
+        else
+        {
+            UpdateStatusText.Foreground = Theme.Grey;
+            UpdateStatusText.Text = u.Installed
+                ? "更新源：GitHub Releases（lisanqiu9-ops/sanqiu-tingji）"
+                : "当前运行的是本地开发版；通过安装包安装后支持一键检查并重启更新。";
+        }
+        CheckUpdateBtn.Content = u.AvailableVersion != null ? $"更新到 v{u.AvailableVersion}" : "检查更新";
+    }
+
+    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        var u = App.Updates;
+        if (u.AvailableVersion != null)
+        {
+            UpdateWindow.ShowFor(model, u);
+            return;
+        }
+        CheckUpdateBtn.IsEnabled = false;
+        CheckUpdateBtn.Content = "检查中…";
+        try
+        {
+            var found = await u.Check();
+            if (found) UpdateWindow.ShowFor(model, u);
+        }
+        finally
+        {
+            CheckUpdateBtn.IsEnabled = true;
+            RenderUpdates();
+        }
+    }
 
     private void Glossary_Click(object sender, RoutedEventArgs e) => ((App)Application.Current).OpenGlossary();
 

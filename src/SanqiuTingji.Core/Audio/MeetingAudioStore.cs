@@ -148,9 +148,27 @@ public static class MeetingAudioStore
             {
                 EnsureMediaFoundation();
                 using (var reader = new MediaFoundationReader(sourceFile))
-                using (var mono16k = new MediaFoundationResampler(reader, new WaveFormat(16000, 16, 1)) { ResamplerQuality = 40 })
                 {
-                    WaveFileWriter.CreateWaveFile(tempWav, mono16k);
+                    var format = reader.WaveFormat;
+                    var resampler = new Resampler(format.SampleRate, 16000);
+                    var blockAlign = Math.Max(1, format.BlockAlign);
+                    var bufLen = Math.Max(blockAlign, format.AverageBytesPerSecond / 2 / blockAlign * blockAlign);
+                    var rawBuf = new byte[bufLen];
+                    using var writer = new WaveFileWriter(tempWav, new WaveFormat(16000, 16, 1));
+                    int read;
+                    while ((read = reader.Read(rawBuf, 0, rawBuf.Length)) > 0)
+                    {
+                        var mono = resampler.Process(Resampler.ToMonoFloat(rawBuf, read, format));
+                        if (mono.Length == 0) continue;
+                        var pcm = new byte[mono.Length * 2];
+                        for (var i = 0; i < mono.Length; i++)
+                        {
+                            var v = (short)Math.Clamp(mono[i] * 32767f, short.MinValue, short.MaxValue);
+                            pcm[2 * i] = (byte)v;
+                            pcm[2 * i + 1] = (byte)(v >> 8);
+                        }
+                        writer.Write(pcm, 0, pcm.Length);
+                    }
                 }
                 var ok = EncodeWavToSession(tempWav, dir);
                 if (ok) store.Mutate(sessionId, s => s.HasAudio = true);

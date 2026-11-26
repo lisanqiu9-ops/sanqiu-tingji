@@ -139,10 +139,15 @@ public partial class App : Application
     private System.Windows.Threading.DispatcherTimer? updateTimer;
     private string? toldAbout;
 
-    /// Half a minute after start, then every six hours: check GitHub, download quietly, say so once.
+    /// Half a minute after start, then every six hours: check GitHub and notify once per version.
     private void StartUpdateChecks()
     {
-        if (Model.Settings.DisableAutoUpdate || !Updates.Installed) return;
+        if (!Model.Settings.AutoUpdateEnabled || !Updates.Installed) return;
+        if (updateTimer != null)
+        {
+            updateTimer.Start();
+            return;
+        }
         updateTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         updateTimer.Tick += async (_, _) =>
         {
@@ -155,6 +160,14 @@ public partial class App : Application
             }
         };
         updateTimer.Start();
+    }
+
+    public void SyncAutoUpdateChecks()
+    {
+        if (Model.Settings.AutoUpdateEnabled)
+            StartUpdateChecks();
+        else
+            updateTimer?.Stop();
     }
 
     /// Stops everything cleanly, then lets Velopack swap in the new version and start it.

@@ -291,16 +291,27 @@ internal sealed class SetupForm : Form
             return;
         }
         var app = Path.Combine(dir, "current", "SanqiuTingji.exe");
-        SyncDesktopShortcut(app, createDesktop);
+        var entry = ResolveShortcutTarget(dir, app);
+        SyncDesktopShortcut(entry, app, createDesktop);
         statusLabel.Text = L.T("安装完成，正在打开三秋听记…");
-        try { if (File.Exists(app)) Process.Start(new ProcessStartInfo(app) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(app) }); }
+        try { if (File.Exists(entry)) Process.Start(new ProcessStartInfo(entry) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(entry) }); }
         catch { }
         await Task.Delay(1200);
         Close();
     }
 
-    /// Ensures the Desktop shortcut matches the user's checkbox (created by default, pointing cleanly to current\SanqiuTingji.exe).
-    private static void SyncDesktopShortcut(string exePath, bool wantShortcut)
+    /// Prefer Velopack's root launcher stub so desktop shortcuts stay valid across in-app updates.
+    private static string ResolveShortcutTarget(string installDir, string currentExe)
+    {
+        var chineseStub = Path.Combine(installDir, "三秋听记.exe");
+        if (File.Exists(chineseStub)) return chineseStub;
+        var asciiStub = Path.Combine(installDir, "SanqiuTingji.exe");
+        if (File.Exists(asciiStub)) return asciiStub;
+        return currentExe;
+    }
+
+    /// Ensures the Desktop shortcut matches the user's checkbox (created by default).
+    private static void SyncDesktopShortcut(string targetExe, string iconExe, bool wantShortcut)
     {
         try
         {
@@ -312,14 +323,14 @@ internal sealed class SetupForm : Form
                 if (File.Exists(lnk)) File.Delete(lnk);
                 return;
             }
-            if (!File.Exists(exePath)) return;
+            if (!File.Exists(targetExe)) return;
             var shellType = Type.GetTypeFromProgID("WScript.Shell");
             if (shellType == null) return;
             dynamic shell = Activator.CreateInstance(shellType);
             dynamic shortcut = shell.CreateShortcut(lnk);
-            shortcut.TargetPath = exePath;
-            shortcut.WorkingDirectory = Path.GetDirectoryName(exePath);
-            shortcut.IconLocation = exePath + ",0";
+            shortcut.TargetPath = targetExe;
+            shortcut.WorkingDirectory = Path.GetDirectoryName(targetExe);
+            shortcut.IconLocation = (File.Exists(iconExe) ? iconExe : targetExe) + ",0";
             shortcut.Description = "三秋听记 · 本地离线语音转写与智能会议纪要";
             shortcut.Save();
         }

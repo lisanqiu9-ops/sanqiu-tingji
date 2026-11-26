@@ -56,6 +56,18 @@ public sealed class Resampler(int inputRate, int outputRate = 16000)
             }
             return mono;
         }
+        if (format.BitsPerSample == 8)
+        {
+            var frames = bytes / channels;
+            var mono = new float[frames];
+            for (var f = 0; f < frames; f++)
+            {
+                float sum = 0;
+                for (var c = 0; c < channels; c++) sum += (buffer[f * channels + c] - 128) / 128f;
+                mono[f] = sum / channels;
+            }
+            return mono;
+        }
         if (format.BitsPerSample == 16)
         {
             var frames = bytes / 2 / channels;
@@ -64,6 +76,23 @@ public sealed class Resampler(int inputRate, int outputRate = 16000)
             {
                 float sum = 0;
                 for (var c = 0; c < channels; c++) sum += BitConverter.ToInt16(buffer, (f * channels + c) * 2) / 32768f;
+                mono[f] = sum / channels;
+            }
+            return mono;
+        }
+        if (format.BitsPerSample == 24)
+        {
+            var frames = bytes / 3 / channels;
+            var mono = new float[frames];
+            for (var f = 0; f < frames; f++)
+            {
+                float sum = 0;
+                for (var c = 0; c < channels; c++)
+                {
+                    var offset = (f * channels + c) * 3;
+                    int sample = buffer[offset] | (buffer[offset + 1] << 8) | ((sbyte)buffer[offset + 2] << 16);
+                    sum += sample / 8388608f;
+                }
                 mono[f] = sum / channels;
             }
             return mono;

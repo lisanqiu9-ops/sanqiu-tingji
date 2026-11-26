@@ -42,8 +42,9 @@ public sealed class AppSettings
     public bool SaveMeetingAudio { get; set; } = true;
     /// Notes updated every ~45 s while the meeting runs; off by default for local/no-API workflow.
     public bool LiveNotes { get; set; }
-    /// Disable GitHub auto-update checks so custom local builds are never overwritten by upstream.
-    public bool DisableAutoUpdate { get; set; } = true;
+    /// Automatically check GitHub Releases for newer versions of SanqiuTingji. On by default.
+    /// (Replaces legacy DisableAutoUpdate so v1.0.1 users upgrading to v1.0.2 get updates enabled.)
+    public bool AutoUpdateEnabled { get; set; } = true;
     /// Include translated lines when exporting Word/Markdown. Off by default for Chinese-only meetings.
     public bool IncludeTranslationInExport { get; set; }
     /// Optional default folder for exporting meeting minutes and transcripts.
