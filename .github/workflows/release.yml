@@ -54,13 +54,14 @@ jobs:
         shell: pwsh
         run: |
           $tag = "${{ github.ref_name }}"
-          $prev = git describe --tags --abbrev=0 "$tag^" 2>$null
-          $range = if ($prev) { "$prev..$tag" } else { $tag }
           $curated = "release-notes/$tag.md"
           if (Test-Path $curated) {
             $body = (Get-Content $curated -Raw -Encoding utf8).Trim() -split "`r?`n"
             $page = $body
           } else {
+            $prev = git describe --tags --abbrev=0 "$tag^" 2>$null
+            if ($LASTEXITCODE -ne 0) { $prev = $null; $global:LASTEXITCODE = 0 }
+            $range = if ($prev) { "$prev..$tag" } else { $tag }
             $subjects = git log $range --no-merges --format=%s
             $feat = $subjects | Where-Object { $_ -match '^feat(\(.+\))?: ' } | ForEach-Object { "- " + ($_ -replace '^feat(\(.+\))?: ', '') }
             $fix = $subjects | Where-Object { $_ -match '^fix(\(.+\))?: ' } | ForEach-Object { "- " + ($_ -replace '^fix(\(.+\))?: ', '') }
@@ -77,6 +78,7 @@ jobs:
           }
           $app -join "`n" | Out-File -Encoding utf8 notes-app.md
           Get-Content notes.md
+          $global:LASTEXITCODE = 0
 
       - name: Pack
         shell: pwsh
@@ -103,5 +105,8 @@ jobs:
           gh release upload $tag "portable/SanqiuTingji-Setup.exe" --clobber
           # Only what people or the updater use: Velopack's own Setup.exe is inside SanqiuTingji-Setup.exe, and
           # RELEASES is the old Squirrel feed (installed copies read releases.win.json).
-          foreach ($extra in "SanqiuTingji.App-win-Setup.exe", "RELEASES") { gh release delete-asset $tag $extra -y }
+          foreach ($extra in "SanqiuTingji.App-win-Setup.exe", "RELEASES") {
+            gh release delete-asset $tag $extra -y 2>$null
+            $global:LASTEXITCODE = 0
+          }
           gh release edit $tag --notes-file notes.md
