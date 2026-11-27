@@ -2305,4 +2305,7 @@ Choose another location, such as D:\Apps\SanqiuTingji.</value>
   <data name="{0} 句" xml:space="preserve">
     <value>{0} lines</value>
   </data>
+  <data name="最小化" xml:space="preserve">
+    <value>Minimize</value>
+  </data>
 </root>

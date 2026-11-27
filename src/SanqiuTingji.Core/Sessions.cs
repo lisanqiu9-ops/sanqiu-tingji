@@ -166,6 +166,14 @@ public sealed partial class SessionStore
                 if (!File.Exists(file)) continue;
                 var s = JsonSerializer.Deserialize<Session>(File.ReadAllText(file), Json.Options);
                 if (s == null) continue;
+                if (s.CreatedAt == null)
+                {
+                    // Legacy sessions saved before CreatedAt existed: recover when they were added
+                    // from the session folder's creation timestamp so "最近添加" vs "会议时间" sorting works.
+                    var dirCreated = Directory.GetCreationTimeUtc(dir);
+                    if (dirCreated.Year >= 2020 && dirCreated <= DateTime.UtcNow.AddDays(1))
+                        s.CreatedAt = dirCreated;
+                }
                 s.EndedAt ??= s.Lines.Count > 0 ? s.StartedAt.AddSeconds(s.Lines[^1].T + 5) : s.StartedAt;
                 sessions.Add(s);
             }

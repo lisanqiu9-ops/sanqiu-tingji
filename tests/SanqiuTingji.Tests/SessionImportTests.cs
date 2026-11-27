@@ -112,9 +112,16 @@ public sealed class SessionImportTests : IDisposable
         Assert.NotNull(loaded.CreatedAt);
         Assert.True(loaded.AddedAt > oldRecording.AddMonths(1));
 
-        // Legacy sessions without CreatedAt gracefully fall back to StartedAt.
-        var legacy = new Session { StartedAt = oldRecording };
-        Assert.Equal(oldRecording, legacy.AddedAt);
+        // Legacy sessions without CreatedAt on disk recover AddedAt from their folder creation time.
+        var legacyId = "legacy-import-01";
+        var legacyDir = Path.Combine(root, legacyId);
+        Directory.CreateDirectory(legacyDir);
+        File.WriteAllText(Path.Combine(legacyDir, "session.json"),
+            """{"id":"legacy-import-01","title":"旧版导入","startedAt":"2025-01-15T03:21:18Z","endedAt":"2025-01-15T03:31:18Z","lines":[{"id":"1","t":1,"src":"测试"}]}""");
+        var legacyLoaded = new SessionStore(root).Get(legacyId)!;
+        Assert.Equal(new DateTime(2025, 1, 15, 3, 21, 18, DateTimeKind.Utc), legacyLoaded.StartedAt);
+        Assert.NotNull(legacyLoaded.CreatedAt);
+        Assert.True(legacyLoaded.AddedAt > new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
     }
 
     private static void WriteSyntheticMp4(string path, byte version, ulong creationSeconds)

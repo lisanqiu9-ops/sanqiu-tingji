@@ -28,6 +28,7 @@ public sealed class UpdateWindow : Window
         if (updates.AvailableVersion == null) return;
         if (open != null)
         {
+            if (open.WindowState == WindowState.Minimized) open.WindowState = WindowState.Normal;
             open.Activate();
             return;
         }
@@ -45,9 +46,8 @@ public sealed class UpdateWindow : Window
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
         Background = Brushes.Transparent;
-        ResizeMode = ResizeMode.NoResize;
+        ResizeMode = ResizeMode.CanMinimize;
         ShowInTaskbar = true;
-        Topmost = true;
         SizeToContent = SizeToContent.Height;
         Width = 460;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -57,16 +57,45 @@ public sealed class UpdateWindow : Window
         var ink = new SolidColorBrush(Color.FromRgb(0x1E, 0x22, 0x35));
         var grey = new SolidColorBrush(Color.FromRgb(0x6B, 0x70, 0x80));
 
-        // Title row: mark, 发现新版本, close.
+        // Title row: mark, 发现新版本, minimize, close.
+        var closeIcon = new Canvas { Width = 10, Height = 10 };
+        closeIcon.Children.Add(new System.Windows.Shapes.Path
+        {
+            Data = Geometry.Parse("M1.5,1.5 L8.5,8.5 M8.5,1.5 L1.5,8.5"),
+            Stroke = grey, StrokeThickness = 1.5,
+            StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round,
+        });
         var close = UiText.Bind(new Button
         {
-            Style = (Style)Application.Current.FindResource("GhostBtn"), Padding = new Thickness(6, 2, 6, 2), ToolTip = L.T("下次提醒"),
-            Content = new TextBlock { Text = "", FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 12, Foreground = grey },
+            Style = (Style)Application.Current.FindResource("GhostBtn"),
+            Width = 28, Height = 26, Padding = new Thickness(0), ToolTip = L.T("下次提醒"),
+            Content = closeIcon,
         }, ("ToolTip", () => L.T("下次提醒")));
         close.Click += (_, _) => Close();
+
+        var minIcon = new Canvas { Width = 10, Height = 10 };
+        minIcon.Children.Add(new System.Windows.Shapes.Path
+        {
+            Data = Geometry.Parse("M1,5.5 L9,5.5"),
+            Stroke = grey, StrokeThickness = 1.5,
+            StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round,
+        });
+        var minimize = UiText.Bind(new Button
+        {
+            Style = (Style)Application.Current.FindResource("GhostBtn"),
+            Width = 28, Height = 26, Padding = new Thickness(0), Margin = new Thickness(0, 0, 2, 0),
+            ToolTip = L.T("最小化"),
+            Content = minIcon,
+        }, ("ToolTip", () => L.T("最小化")));
+        minimize.Click += (_, _) => WindowState = WindowState.Minimized;
+
+        var winControls = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        winControls.Children.Add(minimize);
+        winControls.Children.Add(close);
+
         var titleRow = new DockPanel();
-        DockPanel.SetDock(close, Dock.Right);
-        titleRow.Children.Add(close);
+        DockPanel.SetDock(winControls, Dock.Right);
+        titleRow.Children.Add(winControls);
         titleRow.Children.Add(new Image { Source = Icons.Mark(64, false), Width = 30, Height = 30, Margin = new Thickness(0, 0, 10, 0) });
         titleRow.Children.Add(UiText.Bind(new TextBlock { Text = L.T("发现新版本"), FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = ink, VerticalAlignment = VerticalAlignment.Center }, ("Text", () => L.T("发现新版本"))));
 

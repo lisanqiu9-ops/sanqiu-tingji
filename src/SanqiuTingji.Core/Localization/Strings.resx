@@ -2305,4 +2305,7 @@
   <data name="{0} 句" xml:space="preserve">
     <value>{0} 句</value>
   </data>
+  <data name="最小化" xml:space="preserve">
+    <value>最小化</value>
+  </data>
 </root>
