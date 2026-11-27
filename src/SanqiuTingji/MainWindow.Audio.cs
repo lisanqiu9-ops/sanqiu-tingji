@@ -18,7 +18,8 @@ public sealed class PlaybackLineVM : INotifyPropertyChanged
 {
     public string Id { get; init; } = "";
     public double StartSec { get; init; }
-    public string Timestamp { get; init; } = "00:00";
+    public string Timestamp { get; init; } = "00:00:00";
+    public string SeekTip { get; init; } = "点击跳转到此处播放";
     public string Who { get; init; } = "";
     public Brush WhoBrush { get; init; } = Theme.Grey2;
     public string Text { get; init; } = "";
@@ -144,10 +145,11 @@ public partial class MainWindow
             return;
         }
 
-        // Populate synchronized transcript lines with merged speaker colors
+        // Populate synchronized transcript lines with merged speaker colors and real meeting clock times
         var numbers = SpeakerLabels.Numbers(session.Lines);
         var names = SpeakerLabels.Names(session);
         var colors = SpeakerLabels.ColorNumbers(session);
+        var startLocal = session.StartedAt.ToLocalTime();
         playbackLines.Clear();
         foreach (var l in session.Lines)
         {
@@ -158,11 +160,14 @@ public partial class MainWindow
                 : num is { } sp2 ? $"发言人 {sp2}" : "发言人";
             var brush = l.Speaker == "me" ? Theme.Primary
                 : colorNum is { } c ? Theme.Speaker(c) : Theme.Grey2;
+            var offsetText = TranscriptExport.Clock(l.T);
+            var realClock = startLocal.AddSeconds(Math.Max(0, l.T)).ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
             playbackLines.Add(new PlaybackLineVM
             {
                 Id = l.Id,
                 StartSec = l.T,
-                Timestamp = TranscriptExport.Clock(l.T),
+                Timestamp = realClock,
+                SeekTip = $"音频位置 {offsetText} · 点击跳转到此处播放",
                 Who = who,
                 WhoBrush = brush,
                 Text = l.Src,

@@ -332,15 +332,16 @@ public partial class App : Application
 
         if (listening)
         {
-            Item("\uE8A7", L.T("展开实时面板"), ShowLive, primary: true, hint: "左键单击");
+            Item("\uE8A7", "展开实时听记", ShowLive, primary: true, hint: "左键单击");
             Item("\uE737", L.T("显示主窗口"), OpenMain);
-            Item("\uE71A", L.T("结束本场会议"), () => _ = ToggleListening(), danger: true);
+            Item("\uE71A", "结束收听", () => _ = ToggleListening(), danger: true);
         }
         else
         {
             var clickHint = Model.Settings.TrayClickStarts ? null : "左键单击";
             Item("\uE737", L.T("显示主窗口"), OpenMain, primary: true, hint: clickHint);
             Item("\uE720", L.T("开始收听"), () => _ = ToggleListening(), hint: Model.Settings.TrayClickStarts ? "左键单击" : null);
+            Item("\uE8A7", "打开实时听记", ShowReady);
         }
 
         menu.Items.Add(new Separator());
@@ -440,7 +441,7 @@ public partial class App : Application
     private void UpdateTrayText()
     {
         if (tray == null) return;
-        tray.ToolTipText = Model.IsListening ? L.F("{0} · 收听中（单击展开实时面板，右键结束会议）", Brand.Name)
+        tray.ToolTipText = Model.IsListening ? $"{Brand.Name} · 收听中（单击展开实时听记，右键结束收听）"
             : Model.Settings.TrayClickStarts ? L.F("{0} · 单击开始收听", Brand.Name) : L.F("{0} · 单击显示主窗口", Brand.Name);
     }
 

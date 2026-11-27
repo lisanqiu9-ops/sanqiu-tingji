@@ -682,10 +682,10 @@
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <Border x:Name="rowCard" CornerRadius="12" Padding="12,9" Background="#98FFFFFF" BorderBrush="#1216284C" BorderThickness="1"
-                                                                Cursor="Hand" MouseLeftButtonUp="AudioLine_Click" ToolTip="点击跳转到此处播放">
+                                                                Cursor="Hand" MouseLeftButtonUp="AudioLine_Click" ToolTip="{Binding SeekTip}">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="62"/>
+                                                                    <ColumnDefinition Width="78"/>
                                                                     <ColumnDefinition Width="86"/>
                                                                     <ColumnDefinition Width="*"/>
                                                                 </Grid.ColumnDefinitions>
