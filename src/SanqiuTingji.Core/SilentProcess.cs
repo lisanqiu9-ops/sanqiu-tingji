@@ -146,26 +146,33 @@ internal static class SilentProcess
             {
                 if (!string.IsNullOrEmpty(stdinText))
                 {
-                    var bytes = utf8.GetBytes(stdinText);
-                    await inStream.WriteAsync(bytes, linked.Token);
-                    await inStream.FlushAsync(linked.Token);
+                    try
+                    {
+                        var bytes = utf8.GetBytes(stdinText);
+                        await inStream.WriteAsync(bytes, linked.Token);
+                        await inStream.FlushAsync(linked.Token);
+                    }
+                    catch (IOException)
+                    {
+                        // Child exited early without reading stdin (e.g. fast script or immediate error);
+                        // keep collecting stdout/stderr and exit code instead of masking the real result.
+                    }
                 }
             }
             stdinWrite = null;
 
-            using var proc = Process.GetProcessById((int)pi.dwProcessId);
             try
             {
-                await proc.WaitForExitAsync(linked.Token);
+                await WaitForHandleAsync(procHandle, linked.Token);
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
-                KillTree(job, proc);
+                KillTree(job, procHandle);
                 throw new TimeoutException($"本地 CLI 响应超时（>{(int)timeout.TotalSeconds}s）。");
             }
             catch (OperationCanceledException)
             {
-                KillTree(job, proc);
+                KillTree(job, procHandle);
                 throw;
             }
 
@@ -188,12 +195,39 @@ internal static class SilentProcess
         }
     }
 
-    private static void KillTree(IntPtr job, Process proc)
+    private sealed class HandleWaiter : WaitHandle
+    {
+        public HandleWaiter(IntPtr rawHandle) => SafeWaitHandle = new SafeWaitHandle(rawHandle, ownsHandle: false);
+    }
+
+    private static async Task WaitForHandleAsync(IntPtr handle, CancellationToken ct)
+    {
+        using var waiter = new HandleWaiter(handle);
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        RegisteredWaitHandle? reg = null;
+        try
+        {
+            reg = ThreadPool.RegisterWaitForSingleObject(
+                waiter,
+                static (state, _) => ((TaskCompletionSource)state!).TrySetResult(),
+                tcs,
+                Timeout.Infinite,
+                executeOnlyOnce: true);
+            using var cancelReg = ct.Register(static state => ((TaskCompletionSource)state!).TrySetCanceled(), tcs);
+            await tcs.Task.ConfigureAwait(false);
+        }
+        finally
+        {
+            reg?.Unregister(null);
+        }
+    }
+
+    private static void KillTree(IntPtr job, IntPtr procHandle)
     {
         try
         {
             if (job != IntPtr.Zero) TerminateJobObject(job, 1);
-            else if (!proc.HasExited) proc.Kill(entireProcessTree: true);
+            else if (procHandle != IntPtr.Zero) TerminateProcess(procHandle, 1);
         }
         catch { }
     }
@@ -239,10 +273,17 @@ internal static class SilentProcess
         var stderrTask = process.StandardError.ReadToEndAsync(linked.Token);
         if (!string.IsNullOrEmpty(stdinText))
         {
-            await process.StandardInput.WriteAsync(stdinText.AsMemory(), linked.Token);
-            await process.StandardInput.FlushAsync(linked.Token);
+            try
+            {
+                await process.StandardInput.WriteAsync(stdinText.AsMemory(), linked.Token);
+                await process.StandardInput.FlushAsync(linked.Token);
+            }
+            catch (IOException)
+            {
+                // Child exited before consuming stdin; preserve its real exit code and stderr.
+            }
         }
-        process.StandardInput.Close();
+        try { process.StandardInput.Close(); } catch (IOException) { }
 
         try
         {
@@ -498,6 +539,10 @@ internal static class SilentProcess
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool TerminateJobObject(IntPtr hJob, uint uExitCode);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
