@@ -221,7 +221,15 @@ internal static class SilentProcess
         };
         if (extraEnv != null)
             foreach (var (k, v) in extraEnv) psi.Environment[k] = v;
-        foreach (var a in arguments) psi.ArgumentList.Add(a);
+        if (IsCmdExe(fileName) && TryBuildCmdCommandLine(fileName, arguments, out var cmdLine))
+        {
+            var exePrefix = QuoteArg(fileName);
+            psi.Arguments = cmdLine.Length > exePrefix.Length ? cmdLine[exePrefix.Length..].TrimStart() : "";
+        }
+        else
+        {
+            foreach (var a in arguments) psi.ArgumentList.Add(a);
+        }
 
         using var process = Process.Start(psi) ?? throw new InvalidOperationException($"无法启动本地 CLI：{fileName}");
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -256,6 +264,11 @@ internal static class SilentProcess
 
     internal static string BuildCommandLine(string fileName, IReadOnlyList<string> arguments)
     {
+        // cmd.exe /c strips a single outer quote pair when the inner command contains quoted paths/args.
+        // Using `/d /s /c "..."` makes cmd.exe reliably preserve spaces in both the batch path and arguments.
+        if (IsCmdExe(fileName) && TryBuildCmdCommandLine(fileName, arguments, out var cmdLine))
+            return cmdLine;
+
         var sb = new StringBuilder();
         sb.Append(QuoteArg(fileName));
         foreach (var arg in arguments)
@@ -264,6 +277,45 @@ internal static class SilentProcess
             sb.Append(QuoteArg(arg));
         }
         return sb.ToString();
+    }
+
+    private static bool IsCmdExe(string fileName)
+    {
+        var name = Path.GetFileName(fileName);
+        return string.Equals(name, "cmd.exe", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "cmd", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryBuildCmdCommandLine(string fileName, IReadOnlyList<string> arguments, out string commandLine)
+    {
+        var cIdx = -1;
+        for (var i = 0; i < arguments.Count; i++)
+        {
+            if (string.Equals(arguments[i], "/c", StringComparison.OrdinalIgnoreCase)) { cIdx = i; break; }
+        }
+        if (cIdx < 0 || cIdx + 1 >= arguments.Count)
+        {
+            commandLine = "";
+            return false;
+        }
+        var prefix = new StringBuilder();
+        prefix.Append(QuoteArg(fileName));
+        var hasS = false;
+        for (var i = 0; i < cIdx; i++)
+        {
+            if (string.Equals(arguments[i], "/s", StringComparison.OrdinalIgnoreCase)) hasS = true;
+            prefix.Append(' ').Append(arguments[i]);
+        }
+        if (!hasS) prefix.Append(" /s");
+        prefix.Append(" /c \"");
+        for (var i = cIdx + 1; i < arguments.Count; i++)
+        {
+            if (i > cIdx + 1) prefix.Append(' ');
+            prefix.Append(QuoteArg(arguments[i]));
+        }
+        prefix.Append('"');
+        commandLine = prefix.ToString();
+        return true;
     }
 
     /// Standard Windows CommandLineToArgvW-compatible argument quoting.

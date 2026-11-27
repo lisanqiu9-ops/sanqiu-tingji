@@ -59,15 +59,40 @@ public partial class MainWindow
 
     private void OnMediaImported(string id, string title, int lineCount)
     {
-        SearchBox.Clear();
+        // Reset filter/scope without triggering an intermediate RefreshList that could select
+        // the new session early with keepTab=true and suppress the full detail switch below.
+        searchTimer.Stop();
+        refreshingList = true;
+        if (SearchBox.Text.Length > 0) SearchBox.Text = "";
         archiveScope = 0;
-        ActiveScope.IsChecked = true;
+        if (ActiveScope.IsChecked != true) ActiveScope.IsChecked = true;
+        refreshingList = false;
+
         foreach (var group in treeGroups)
             if (group.Id == "") group.IsExpanded = true;
-        selected = id;
+        ShowDetail(id, keepTab: false, forceSwitch: true);
         RefreshList();
-        ShowDetail(id, keepTab: false);
+        RevealRow(id);
         ShowGlassToast($"已导入「{title}」· 共 {lineCount} 句（原声录音后台保存中）");
+    }
+
+    /// Scrolls the library to a meeting's row once its container exists: an imported recording
+    /// keeps its own date, so it may land far down the list.
+    private void RevealRow(string id)
+    {
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () =>
+        {
+            foreach (var group in treeGroups)
+            {
+                if (group.Children.FirstOrDefault(r => r.Id == id) is not { } row) continue;
+                if (SessionList.ItemContainerGenerator.ContainerFromItem(group) is not System.Windows.Controls.TreeViewItem groupItem) return;
+                groupItem.IsExpanded = true;
+                groupItem.UpdateLayout();
+                if (groupItem.ItemContainerGenerator.ContainerFromItem(row) is System.Windows.Controls.TreeViewItem rowItem)
+                    rowItem.BringIntoView();
+                return;
+            }
+        });
     }
 
     private void OnMediaImportFailed(string message)

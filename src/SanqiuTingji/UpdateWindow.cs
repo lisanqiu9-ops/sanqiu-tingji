@@ -20,6 +20,7 @@ public sealed class UpdateWindow : Window
     private readonly Button now;
     private readonly ProgressBar bar;
     private readonly TextBlock status;
+    private readonly System.Windows.Documents.Run targetRun;
 
     /// Shows the box for the available version (brings it back if it's already open).
     public static void ShowFor(AppModel model, Updates updates)
@@ -73,7 +74,8 @@ public sealed class UpdateWindow : Window
         var jump = new TextBlock { FontSize = 13, Margin = new Thickness(0, 16, 0, 0), FontFamily = new FontFamily("Consolas, Microsoft YaHei UI") };
         jump.Inlines.Add(new System.Windows.Documents.Run($"v{updates.Version}") { Foreground = grey });
         jump.Inlines.Add(new System.Windows.Documents.Run("  ▷  ") { Foreground = grey });
-        jump.Inlines.Add(new System.Windows.Documents.Run($"v{next}") { Foreground = Theme.Primary, FontWeight = FontWeights.Bold });
+        targetRun = new System.Windows.Documents.Run($"v{next}") { Foreground = Theme.Primary, FontWeight = FontWeights.Bold };
+        jump.Inlines.Add(targetRun);
 
         notesHost.Margin = new Thickness(0, 2, 8, 2);
         notesHost.Children.Add(UiText.Bind(new TextBlock { Text = L.T("正在读取更新内容…"), Foreground = grey, FontSize = 13 }, ("Text", () => L.T("正在读取更新内容…"))));
@@ -144,6 +146,14 @@ public sealed class UpdateWindow : Window
         later.IsEnabled = now.IsEnabled = false;
         UiText.Set(now, "Content", () => L.T("下载中…"));
         bar.Visibility = Visibility.Visible;
+        UiText.Set(status, "Text", () => L.T("正在确认最新版本…"));
+        var beforeVer = updates.AvailableVersion;
+        await updates.Check();
+        if (updates.AvailableVersion is { } latestVer && latestVer != beforeVer)
+        {
+            targetRun.Text = $"v{latestVer}";
+            ShowNotes(await updates.Notes());
+        }
         UiText.Set(status, "Text", () => L.T("正在下载新版本… 0%"));
         var ok = await updates.Download(p => Dispatcher.BeginInvoke(() =>
         {

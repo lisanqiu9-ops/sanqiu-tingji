@@ -73,6 +73,20 @@ public static class BuiltInGlossaries
         return (totalAdded, totalUpdated);
     }
 
+    /// Auto-imports any built-in packs that have not yet been seeded for this user,
+    /// without overwriting custom edits or re-adding terms the user later deleted.
+    public static bool SeedMissing(Glossary glossary, AppSettings settings)
+    {
+        settings.SeededGlossaryPacks ??= [];
+        var missing = All.Where(p => !settings.SeededGlossaryPacks.Contains(p.Id, StringComparer.OrdinalIgnoreCase))
+            .Select(p => p.Id)
+            .ToList();
+        if (missing.Count == 0) return false;
+        Import(glossary, missing);
+        settings.SeededGlossaryPacks.AddRange(missing);
+        return true;
+    }
+
     internal static IReadOnlyList<string> ParseSpellings(string text)
     {
         var list = new List<string>();

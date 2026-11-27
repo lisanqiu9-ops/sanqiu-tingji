@@ -92,7 +92,7 @@
                                                     <TextBlock Text="本地 CLI 桥接" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
                                                 </StackPanel>
                                             </DockPanel>
-                                            <TextBlock Text="复用电脑已登录的 Gemini / ChatGPT (Codex) / Claude / Antigravity 订阅" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="17"/>
+                                            <TextBlock Text="复用电脑已登录的 Antigravity / WorkBuddy / Codex / Gemini / Claude 订阅" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="17"/>
                                         </StackPanel>
                                     </Border>
 
@@ -162,7 +162,10 @@
                                         </DockPanel>
                                         <TextBlock x:Name="CliPresetHint" Style="{StaticResource Helper}" TextWrapping="Wrap" Margin="0,0,0,6"/>
                                         <DockPanel Style="{StaticResource Row}">
-                                            <TextBox x:Name="CliCmdBox" DockPanel.Dock="Right" Width="340" Style="{StaticResource Field}" LostFocus="CliText_LostFocus"/>
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <TextBox x:Name="CliCmdBox" Width="278" Style="{StaticResource Field}" LostFocus="CliText_LostFocus"/>
+                                                <Button Content="浏览…" Style="{StaticResource Btn}" Padding="10,4" Margin="6,0,0,0" Click="CliBrowse_Click"/>
+                                            </StackPanel>
                                             <TextBlock Text="命令 / 路径" VerticalAlignment="Center"/>
                                         </DockPanel>
                                         <DockPanel Style="{StaticResource Row}">

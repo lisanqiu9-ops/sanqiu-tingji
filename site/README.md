@@ -6,6 +6,7 @@
 2. `/notices.json` — 客户端左上角「消息与更新」静态只读公告源（边缘缓存 GitHub Raw，异常时自动回退内置 `public/notices.json`）
 3. `/releases/*` — 客户端 Velopack 国内直连更新源（边缘代理并缓存 `releases.win.json`、增量包 `*-delta.nupkg` 与完整包 `*-full.nupkg`，支持 Range 断点续传）
 4. `/download/*` — 落地页安装包 `SanqiuTingji-Setup.exe` 与便携版 `SanqiuTingji.App-win-Portable.zip` 国内直连下载入口
+5. `/models/*` — 客户端首次启动所需语音识别与声纹模型国内直连高速代理（30 天边缘缓存，支持 Range 断点续传）
 
 ## 首次授权与一键部署
 

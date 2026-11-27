@@ -226,9 +226,17 @@ public sealed class AppModel
         Notes.Changed += () => Ui(() => NotesChanged?.Invoke());
         if (!preview)
         {
-            if (CliBridge.TryAutoConfigure(Settings)) Settings.Save();
+            var settingsChanged = false;
+            if (BuiltInGlossaries.SeedMissing(Glossary, Settings)) settingsChanged = true;
+            if (CliBridge.TryAutoConfigure(Settings)) settingsChanged = true;
+            if (settingsChanged) Settings.Save();
             if (Ai.State == AiClient.KeyState.Unchecked) _ = Ai.Check();
             if (Models.Ready) loading = Task.Run(Load);
+            else _ = Task.Run(async () =>
+            {
+                if (await Models.TryImportBundledAsync() > 0 && Models.Ready)
+                    loading ??= Task.Run(Load);
+            });
         }
     }
 

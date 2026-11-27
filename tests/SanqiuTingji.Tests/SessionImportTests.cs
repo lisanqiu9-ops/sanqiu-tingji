@@ -62,5 +62,55 @@ public sealed class SessionImportTests : IDisposable
         Assert.DoesNotContain("secret", message);
     }
 
+    [Fact]
+    public void MediaTimeReadsMp4MvhdV0AndV1AfterMdat()
+    {
+        Directory.CreateDirectory(root);
+        var target = new DateTime(2026, 10, 8, 2, 21, 0, DateTimeKind.Utc);
+        var mp4Epoch = new DateTime(1904, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var secs = (ulong)(target - mp4Epoch).TotalSeconds;
+
+        var v0File = Path.Combine(root, "rec-v0.m4a");
+        WriteSyntheticMp4(v0File, version: 0, creationSeconds: secs);
+        Assert.Equal(target, SanqiuTingji.Speech.MediaTime.Mp4CreationUtc(v0File));
+        Assert.Equal(target, SanqiuTingji.Speech.MediaTime.RecordedStartUtc(v0File, 1131, new DateTime(2026, 11, 26, 0, 0, 0, DateTimeKind.Utc)));
+
+        var v1File = Path.Combine(root, "rec-v1.mp4");
+        WriteSyntheticMp4(v1File, version: 1, creationSeconds: secs);
+        Assert.Equal(target, SanqiuTingji.Speech.MediaTime.Mp4CreationUtc(v1File));
+    }
+
+    [Fact]
+    public void MediaTimeFallsBackToLastWriteTimeMinusDurationForNonMp4()
+    {
+        Directory.CreateDirectory(root);
+        var wav = Path.Combine(root, "meeting.wav");
+        File.WriteAllBytes(wav, [0, 1, 2, 3]);
+        var writeUtc = new DateTime(2026, 10, 8, 2, 40, 0, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(wav, writeUtc);
+
+        var start = SanqiuTingji.Speech.MediaTime.RecordedStartUtc(wav, 600, new DateTime(2026, 11, 26, 0, 0, 0, DateTimeKind.Utc));
+        Assert.Equal(new DateTime(2026, 10, 8, 2, 30, 0, DateTimeKind.Utc), start);
+    }
+
+    private static void WriteSyntheticMp4(string path, byte version, ulong creationSeconds)
+    {
+        static byte[] Be32(uint v) => [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
+        static byte[] Box(string type, byte[] payload)
+        {
+            var len = (uint)(8 + payload.Length);
+            return [.. Be32(len), .. System.Text.Encoding.ASCII.GetBytes(type), .. payload];
+        }
+
+        byte[] mvhdBody = version == 1
+            ? [1, 0, 0, 0, .. Be32((uint)(creationSeconds >> 32)), .. Be32((uint)creationSeconds), 0, 0, 0, 0]
+            : [0, 0, 0, 0, .. Be32((uint)creationSeconds), 0, 0, 0, 0];
+        var mvhd = Box("mvhd", mvhdBody);
+        var moov = Box("moov", mvhd);
+        var ftyp = Box("ftyp", System.Text.Encoding.ASCII.GetBytes("M4A "));
+        var mdat = Box("mdat", new byte[32]);
+        File.WriteAllBytes(path, [.. ftyp, .. mdat, .. moov]);
+    }
+
     public void Dispose() { if (Directory.Exists(root)) Directory.Delete(root, true); }
 }

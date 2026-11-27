@@ -25,7 +25,8 @@ public static class MediaImport
         var result = new Session
         {
             Title = Path.GetFileNameWithoutExtension(path), Renamed = true,
-            StartedAt = DateTime.UtcNow, HasAudio = false
+            // The recording's own time, so lines and notes show when things were said.
+            StartedAt = MediaTime.RecordedStartUtc(path, duration) ?? DateTime.UtcNow, HasAudio = false
         };
         result.EndedAt = result.StartedAt.AddSeconds(duration);
         using var source = new FileSource(path, realTime: false);

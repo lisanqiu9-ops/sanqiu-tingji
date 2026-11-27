@@ -195,6 +195,13 @@ public sealed class MediaImportQueue
             var session = await MediaImport.Recognize(
                 mediaPath, model.Recognizer!, model.Models, job.DistinguishVoices, reporter, token).ConfigureAwait(false);
             if (title != null) session.Title = title;
+            if (job.IsRemote)
+            {
+                // A downloaded video's file times say when it was published or fetched, not a meeting: date it now.
+                var length = (session.EndedAt ?? session.StartedAt) - session.StartedAt;
+                session.StartedAt = DateTime.UtcNow;
+                session.EndedAt = session.StartedAt + length;
+            }
             session.TemplateId = model.Settings.DefaultTemplateId;
             token.ThrowIfCancellationRequested();
 

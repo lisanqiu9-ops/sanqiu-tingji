@@ -239,11 +239,11 @@ public partial class MainWindow : Window
         if (!refreshingList && e.NewValue is SessionRow r) UiWatch.Time("open meeting", () => ShowDetail(r.Id, keepTab: false));
     }
 
-    private void ShowDetail(string id, bool keepTab)
+    private void ShowDetail(string id, bool keepTab, bool forceSwitch = false)
     {
         var s = model.Store.Get(id);
         if (s == null) { Detail.Visibility = Visibility.Collapsed; return; }
-        var switched = selected != id;
+        var switched = forceSwitch || selected != id;
         if (switched) LibraryError.Visibility = Visibility.Collapsed;
         selected = id;
         Detail.Visibility = Visibility.Visible;
@@ -372,6 +372,7 @@ public partial class MainWindow : Window
         var hasText = SearchBox.Text.Length > 0;
         if (SearchHint != null) SearchHint.Visibility = hasText ? Visibility.Collapsed : Visibility.Visible;
         if (ClearSearchBtn != null) ClearSearchBtn.Visibility = hasText ? Visibility.Visible : Visibility.Collapsed;
+        if (refreshingList) return;
         searchTimer.Stop();
         if (SearchBox.Text.Trim().Length == 0) RefreshList();
         else searchTimer.Start();

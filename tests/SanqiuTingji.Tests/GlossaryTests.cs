@@ -392,6 +392,27 @@ public class GlossaryTests
             var g2 = Make();
             g2.Import(exported);
             Assert.True(g2.FindByText("可中")?.ExactOnly);
+
+            // SeedMissing seeds once and respects subsequent user deletions.
+            var settings = new AppSettings();
+            var g3 = new Glossary(Path.Combine(Path.GetTempPath(), "sanqiutingji-seed-" + Guid.NewGuid().ToString("N") + ".json"));
+            try
+            {
+                Assert.True(BuiltInGlossaries.SeedMissing(g3, settings));
+                Assert.Equal(BuiltInGlossaries.All.Count, settings.SeededGlossaryPacks.Count);
+                Assert.Contains("电力系统", g3.Groups);
+                Assert.Contains("河南话常用词", g3.Groups);
+                var target = g3.FindByText("算电协同")!;
+                g3.Remove(target.Id);
+                Assert.False(BuiltInGlossaries.SeedMissing(g3, settings));
+                Assert.Null(g3.FindByText("算电协同"));
+            }
+            finally
+            {
+                // Best-effort cleanup of temp glossary files.
+                foreach (var f in Directory.GetFiles(Path.GetTempPath(), "sanqiutingji-seed-*"))
+                    try { File.Delete(f); } catch { }
+            }
         }
         finally
         {

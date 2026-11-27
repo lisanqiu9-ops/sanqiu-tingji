@@ -2248,4 +2248,58 @@
   <data name="3 字及以上词条自动容忍 uo/e、f/h、r/l、ui/ei 等常见方言与口音偏移；2 字词保持严格同音或按误听写法替换。" xml:space="preserve">
     <value>3 字及以上词条自动容忍 uo/e、f/h、r/l、ui/ei 等常见方言与口音偏移；2 字词保持严格同音或按误听写法替换。</value>
   </data>
+  <data name="正在确认最新版本…" xml:space="preserve">
+    <value>正在确认最新版本…</value>
+  </data>
+  <data name="详细纪要（深度整理）" xml:space="preserve">
+    <value>详细纪要（深度整理）</value>
+  </data>
+  <data name="信息量拉满：详细摘要、完整议题与数据事实、各方观点、待确认风险、决策与待办。" xml:space="preserve">
+    <value>信息量拉满：详细摘要、完整议题与数据事实、各方观点、待确认风险、决策与待办。</value>
+  </data>
+  <data name="关键事实与数据" xml:space="preserve">
+    <value>关键事实与数据</value>
+  </data>
+  <data name="各方观点与建议" xml:space="preserve">
+    <value>各方观点与建议</value>
+  </data>
+  <data name="待确认与风险" xml:space="preserve">
+    <value>待确认与风险</value>
+  </data>
+  <data name="简短沟通 / 速记" xml:space="preserve">
+    <value>简短沟通 / 速记</value>
+  </data>
+  <data name="适合 3–15 分钟的临时沟通、电话或短录音：把背景、有效信息、诉求与跟进都充分提炼。" xml:space="preserve">
+    <value>适合 3–15 分钟的临时沟通、电话或短录音：把背景、有效信息、诉求与跟进都充分提炼。</value>
+  </data>
+  <data name="沟通背景与起因" xml:space="preserve">
+    <value>沟通背景与起因</value>
+  </data>
+  <data name="核心信息与现状" xml:space="preserve">
+    <value>核心信息与现状</value>
+  </data>
+  <data name="诉求与关切" xml:space="preserve">
+    <value>诉求与关切</value>
+  </data>
+  <data name="达成的共识" xml:space="preserve">
+    <value>达成的共识</value>
+  </data>
+  <data name="下一步跟进" xml:space="preserve">
+    <value>下一步跟进</value>
+  </data>
+  <data name="正式公文纪要" xml:space="preserve">
+    <value>正式公文纪要</value>
+  </data>
+  <data name="适合国企、电力、政务及正式评审：规范书面语，按议题、形成意见、协调事项与工作部署输出。" xml:space="preserve">
+    <value>适合国企、电力、政务及正式评审：规范书面语，按议题、形成意见、协调事项与工作部署输出。</value>
+  </data>
+  <data name="形成意见与要求" xml:space="preserve">
+    <value>形成意见与要求</value>
+  </data>
+  <data name="存在问题与协调事项" xml:space="preserve">
+    <value>存在问题与协调事项</value>
+  </data>
+  <data name="工作部署与责任分工" xml:space="preserve">
+    <value>工作部署与责任分工</value>
+  </data>
 </root>

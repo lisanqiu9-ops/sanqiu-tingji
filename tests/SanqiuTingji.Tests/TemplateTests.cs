@@ -16,7 +16,10 @@ public class TemplateTests
     [Fact]
     public void BuiltInTemplatesAreWellFormed()
     {
-        Assert.True(NoteTemplates.BuiltIn.Length >= 15);
+        Assert.True(NoteTemplates.BuiltIn.Length >= 18);
+        Assert.Contains(NoteTemplates.BuiltIn, t => t.Id == "detailed");
+        Assert.Contains(NoteTemplates.BuiltIn, t => t.Id == "quick_chat");
+        Assert.Contains(NoteTemplates.BuiltIn, t => t.Id == "formal_minutes");
         Assert.Equal(NoteTemplates.BuiltIn.Length, NoteTemplates.BuiltIn.Select(t => t.Id).Distinct().Count());
         foreach (var t in NoteTemplates.BuiltIn)
         {

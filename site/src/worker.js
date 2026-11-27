@@ -13,6 +13,23 @@ const DOWNLOAD_ALLOWLIST = new Set([
   "SanqiuTingji-Setup.exe",
   "SanqiuTingji.App-win-Portable.zip",
 ]);
+const MODEL_UPSTREAMS = {
+  "sense-voice/model.int8.onnx": [
+    "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/model.int8.onnx",
+    "https://www.modelscope.cn/models/gomodels/sherpa/resolve/master/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.int8.onnx",
+  ],
+  "sense-voice/tokens.txt": [
+    "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/tokens.txt",
+    "https://www.modelscope.cn/models/gomodels/sherpa/resolve/master/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tokens.txt",
+  ],
+  "silero_vad.onnx": [
+    "https://huggingface.co/csukuangfj/vad/resolve/main/silero_vad.onnx",
+  ],
+  "3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx": [
+    "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx",
+    "https://huggingface.co/csukuangfj/speaker-embedding-models/resolve/main/3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx",
+  ],
+};
 
 function corsHeaders(extra = {}) {
   return {
@@ -218,7 +235,21 @@ export default {
       );
     }
 
-    // 5. Landing page & static assets
+    // 5. China-direct speech & voiceprint model mirror: /models/<relativePath>
+    if (path.startsWith("/models/")) {
+      const modelRel = decodeURIComponent(path.slice("/models/".length));
+      const upstreams = MODEL_UPSTREAMS[modelRel];
+      if (!upstreams) {
+        return new Response("Not Found", { status: 404, headers: corsHeaders() });
+      }
+      const fileName = modelRel.split("/").pop() || "model.bin";
+      return proxyReleaseFile(request, upstreams, fileName, {
+        ttlSeconds: 2592000,
+        forceDownload: false,
+      });
+    }
+
+    // 6. Landing page & static assets
     return env.ASSETS.fetch(request);
   },
 };

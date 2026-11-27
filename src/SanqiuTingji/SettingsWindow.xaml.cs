@@ -643,10 +643,12 @@ public partial class SettingsWindow : Window
         }).ToArray(), s.CliNotesPreset);
         Fill(CliModeBox,
             [(CliInputMode.Argument.ToString(), "命令行参数（适合 agy 等）"),
-             (CliInputMode.Stdin.ToString(), "标准输入 stdin（适合 codex / gemini / claude）"),
+             (CliInputMode.Stdin.ToString(), "标准输入 stdin（适合 workbuddy / codex / gemini / claude）"),
              (CliInputMode.PromptFile.ToString(), "临时文件 {prompt_file}（适合自定义脚本）")],
             s.CliNotesInputMode.ToString());
         var preset = CliBridge.FindPreset(s.CliNotesPreset);
+        // Self-heal legacy extensionless npm shims (e.g. `...\npm\claude`) when opening settings.
+        if (CliBridge.TryAutoConfigure(s)) model.SaveSettings();
         CliCmdBox.Text = string.IsNullOrWhiteSpace(s.CliNotesCommand) ? preset.Executable : s.CliNotesCommand;
         CliArgsBox.Text = s.CliNotesArgs ?? preset.Args;
         CliModelBox.Text = s.CliNotesModel ?? "";
@@ -661,7 +663,7 @@ public partial class SettingsWindow : Window
             var hit = detectedClis.FirstOrDefault(d => d.Preset.Id == preset.Id);
             CliTestText.Foreground = hit?.Installed == true ? Theme.OnAir : Theme.Grey;
             CliTestText.Text = hit?.Installed == true
-                ? $"已选定 {preset.Name}（已自动匹配路径），点右侧「测试连通」验证即可"
+                ? $"已选定 {preset.Name}（{System.IO.Path.GetFileName(hit.ResolvedPath)}），点右侧「测试连通」验证即可"
                 : preset.Id == "custom" ? "自定义命令模式：请展开下方「高级参数」填写命令路径"
                 : $"{preset.Name} 尚未检测到安装，请参考上方指引安装或切换其他已检测的 CLI";
         }
@@ -671,8 +673,9 @@ public partial class SettingsWindow : Window
     {
         CliCardsGrid.Children.Clear();
         var activeId = model.Settings.CliNotesPreset;
-        foreach (var item in detectedClis.Where(d => d.Preset.Id != "custom"))
+        foreach (var item in detectedClis)
         {
+            var isCustom = item.Preset.Id == "custom";
             var selected = string.Equals(item.Preset.Id, activeId, StringComparison.OrdinalIgnoreCase);
             var ok = item.Installed;
 
@@ -685,7 +688,7 @@ public partial class SettingsWindow : Window
                 VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
-                    Text = ok ? "● 已检测到" : "未安装",
+                    Text = isCustom ? "手动配置" : ok ? "● 已检测到" : "未安装",
                     FontSize = 10,
                     FontWeight = ok ? FontWeights.SemiBold : FontWeights.Normal,
                     Foreground = ok ? new SolidColorBrush(Color.FromRgb(0x16, 0x7E, 0x45)) : Theme.Grey2,
@@ -723,8 +726,9 @@ public partial class SettingsWindow : Window
                 CornerRadius = new CornerRadius(11),
                 Padding = new Thickness(11, 9, 11, 9),
                 Margin = new Thickness(0, 0, 8, 8),
-                Opacity = ok || selected ? 1.0 : 0.72,
+                Opacity = ok || selected || isCustom ? 1.0 : 0.72,
                 Cursor = Cursors.Hand,
+                ToolTip = item.ResolvedPath is { Length: > 0 } p ? $"本机路径：{p}" : null,
                 Child = body,
             };
             var captured = item;
@@ -739,13 +743,34 @@ public partial class SettingsWindow : Window
         var s = model.Settings;
         s.AiMode = AiEngineMode.LocalCli;
         s.CliNotesPreset = preset.Id;
-        s.CliNotesCommand = item.ResolvedPath ?? preset.Executable;
-        s.CliNotesArgs = preset.Args;
-        s.CliNotesInputMode = preset.InputMode;
-        s.CliNotesEnabled = item.Installed;
+        if (preset.Id == "custom")
+        {
+            CliAdvancedExpander.IsExpanded = true;
+        }
+        else
+        {
+            s.CliNotesCommand = item.ResolvedPath ?? preset.Executable;
+            s.CliNotesArgs = preset.Args;
+            s.CliNotesInputMode = preset.InputMode;
+            s.CliNotesEnabled = item.Installed;
+        }
         model.SaveSettings();
         CliTestText.Text = "";
         RenderCliBridge();
+    }
+
+    private void CliBrowse_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "选择本地 CLI 可执行文件或脚本",
+            Filter = "可执行文件或脚本 (*.exe;*.cmd;*.bat;*.js;*.ps1)|*.exe;*.cmd;*.bat;*.js;*.ps1|所有文件 (*.*)|*.*",
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        CliCmdBox.Text = dialog.FileName;
+        SaveCliSettings();
+        CliTestText.Foreground = Theme.Grey;
+        CliTestText.Text = "已更新本地 CLI 路径，请点击右侧「测试连通」验证。";
     }
 
     private void UpdateCliInstallBanner(CliBridgePreset preset)
@@ -757,10 +782,11 @@ public partial class SettingsWindow : Window
             currentInstallCmd = "";
             return;
         }
-        CliInstallTitle.Text = $"本机尚未安装 {preset.Name}，在终端执行以下 1 行命令安装并登录后点「重新扫描」：";
+        CliInstallTitle.Text = $"本机尚未安装 {preset.Name}，按下方指引安装并登录后点「重新扫描」：";
         CliInstallCmd.Text = preset.InstallCommand;
-        currentInstallCmd = preset.InstallCommand;
-        CliCopyInstallBtn.Visibility = preset.InstallCommand.StartsWith("npm ") ? Visibility.Visible : Visibility.Collapsed;
+        var npmIdx = preset.InstallCommand.IndexOf("npm ", StringComparison.OrdinalIgnoreCase);
+        currentInstallCmd = npmIdx >= 0 ? preset.InstallCommand[npmIdx..].Trim() : preset.InstallCommand;
+        CliCopyInstallBtn.Visibility = npmIdx >= 0 ? Visibility.Visible : Visibility.Collapsed;
         CliInstallBanner.Visibility = Visibility.Visible;
     }
 

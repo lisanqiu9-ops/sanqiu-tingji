@@ -174,7 +174,10 @@ public static class NotesPrompt
         // The shape: title and summary, then the template's parts.
         p.Append("\n\nReturn the full notes as one JSON object with exactly these keys:\n");
         p.Append("{\"title\": \"the meeting's name: what it is about, a few words\",\n");
-        p.Append($" \"summary\": \"{(template.Topics ? "2-3 sentences on the whole meeting so far" : "3-5 sentences on the whole meeting so far")}\",\n");
+        var summaryRange = final
+            ? (template.Topics ? "3-5 concrete sentences on context, discussion, and outcomes" : "4-6 concrete sentences on context, facts, and outcomes")
+            : (template.Topics ? "2-3 sentences on the whole meeting so far" : "3-5 sentences on the whole meeting so far");
+        p.Append($" \"summary\": \"{summaryRange}\",\n");
         if (template.Topics)
         {
             var fish = template.Fishbone
@@ -192,18 +195,24 @@ public static class NotesPrompt
         p.Length -= 2;
         p.Append("}\n");
 
-        p.Append("Rules (be brief: these notes are read at a glance during the meeting):\n");
+        p.Append(final
+            ? "Rules (final notes — concrete, thorough, high-signal; keep figures, names, reasons, and constraints, even for short chats):\n"
+            : "Rules (be brief: these notes are read at a glance during the meeting):\n");
         if (template.Focus.Length > 0) p.Append($"- Focus: {template.Focus}\n");
         p.Append("- title: a name for the whole meeting, like a calendar entry (at most 12 Chinese characters or 6 words; no date, no quotes, not \"会议\" alone). Keep the current title unless the meeting's subject has clearly changed.\n");
-        p.Append($"- summary: at most {(template.Topics ? 3 : 5)} short sentences.\n");
+        p.Append(final
+            ? $"- summary: {(template.Topics ? "3-5" : "4-6")} specific sentences with context, core facts, and conclusions; no vague filler.\n"
+            : $"- summary: at most {(template.Topics ? 3 : 5)} short sentences.\n");
         if (template.Topics)
         {
             p.Append($"- Topics in time order, at most 8 in total. A topic is a stretch of the meeting, usually 3-10 minutes, not a single remark: start a new one only when the subject clearly changes and the current topic started at least 2 minutes before the newest line{(final ? "" : "; add at most one new topic per update")}. Otherwise add to the current one, and merge small neighbouring topics. Keep earlier topics as they are unless new lines correct them. The last topic is the one being discussed now.\n");
-            p.Append("- At most 4 points per topic, each one short phrase. Merge rather than repeat.\n");
+            p.Append(final
+                ? "- 3-6 substantive points per topic with concrete facts, figures, options, and reasons. Merge rather than repeat.\n"
+                : "- At most 4 points per topic, each one short phrase. Merge rather than repeat.\n");
             if (template.Fishbone) p.Append("- Add a fishbone only to a topic that discusses causes, reasons or factors (3-5 branches); otherwise null.\n");
         }
         foreach (var s in template.Sections)
-            p.Append($"- {s.Key} ({s.Title}): {s.Instruction}. At most 8 items, each one short line; [] when the meeting said nothing for it.\n");
+            p.Append($"- {s.Key} ({s.Title}): {s.Instruction}. At most {(final ? 12 : 8)} items, each one clear {(final ? "specific" : "short")} line; [] when nothing relevant was said.\n");
         if (template.Sections.Any(s => s.Owner))
             p.Append("- owner: only someone the transcript names or clearly implies; never guess.\n");
         p.Append($"- Dates and times: whenever an item mentions when (a deadline, a milestone, the next meeting, \"tomorrow\", \"周三前\", \"下周一\", \"月底\"), write it as a real date resolved against the meeting date {start:yyyy年M月d日}（{Weekdays[(int)start.DayOfWeek]}）, e.g. \"11月6日（周三）\"; keep a clock time if one was said (\"11月6日 15:00\"). Never leave a relative word alone, and never invent a date that was not said.\n");

@@ -73,6 +73,8 @@ public sealed class AppSettings
     public bool GlossaryOn { get; set; } = true;
     /// Tolerance for dialect / accent pronunciation shifts (e.g. Henan dialect uo/e, f/h, r/l, ei/ui) on 3+ char terms. On by default.
     public bool GlossaryDialectTolerance { get; set; } = true;
+    /// Built-in glossary pack ids already auto-seeded once on startup so user edits/deletions are respected afterwards.
+    public List<string> SeededGlossaryPacks { get; set; } = [];
     /// When a line has words that sound close to a glossary term, ask the AI whether they were
     /// misheard. Off by default: it uses the user's AI quota.
     public bool GlossaryAiCheck { get; set; }

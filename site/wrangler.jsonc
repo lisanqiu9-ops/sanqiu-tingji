@@ -9,7 +9,8 @@
     "run_worker_first": [
       "/notices.json",
       "/releases/*",
-      "/download/*"
+      "/download/*",
+      "/models/*"
     ]
   },
   "routes": [
