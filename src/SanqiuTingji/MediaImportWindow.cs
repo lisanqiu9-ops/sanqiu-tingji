@@ -14,6 +14,9 @@ public sealed class MediaImportWindow : Window
     private readonly AppModel model;
     private readonly TextBox link = new();
     private readonly CheckBox speakersCheck = new();
+    private readonly CheckBox autoNotesCheck = new();
+    private readonly ComboBox groupBox = new();
+    private readonly ComboBox templateBox = new();
     private readonly TextBlock hintNote = new()
     {
         TextWrapping = TextWrapping.Wrap,
@@ -99,6 +102,49 @@ public sealed class MediaImportWindow : Window
         speakersCheck.FontSize = 12.5;
         speakersCheck.Foreground = Theme.Ink;
         panel.Children.Add(speakersCheck);
+
+        var hasAi = model.ActiveCliReady || model.ActiveCloudReady;
+        autoNotesCheck.IsChecked = false;
+        autoNotesCheck.IsEnabled = hasAi;
+        autoNotesCheck.Margin = new Thickness(2, 8, 0, 0);
+        autoNotesCheck.Content = hasAi
+            ? "转写完成后自动按下方模板生成纪要"
+            : "转写完成后自动生成纪要（需先在设置中配置 AI 引擎）";
+        autoNotesCheck.FontSize = 12;
+        autoNotesCheck.Foreground = hasAi ? Theme.Ink : Theme.Grey2;
+        panel.Children.Add(autoNotesCheck);
+
+        var selectors = new Grid { Margin = new Thickness(0, 10, 0, 0) };
+        selectors.ColumnDefinitions.Add(new ColumnDefinition());
+        selectors.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(10) });
+        selectors.ColumnDefinitions.Add(new ColumnDefinition());
+
+        groupBox.Items.Add(new ComboBoxItem { Content = L.T("未分组"), Tag = "" });
+        foreach (var g in model.Store.Groups) groupBox.Items.Add(new ComboBoxItem { Content = g.Name, Tag = g.Id });
+        groupBox.SelectedIndex = 0;
+        var gStack = new StackPanel();
+        gStack.Children.Add(new TextBlock { Text = "导入到分组", FontSize = 11.5, Foreground = Theme.Grey, Margin = new Thickness(2, 0, 0, 4) });
+        gStack.Children.Add(groupBox);
+        Grid.SetColumn(gStack, 0);
+        selectors.Children.Add(gStack);
+
+        ComboBoxItem? defTpl = null;
+        foreach (var t in model.Templates)
+        {
+            var lbl = t.Id == model.Settings.DefaultTemplateId
+                ? L.F("{0}（默认）", t.BuiltIn ? L.T(t.Name) : t.Name)
+                : t.BuiltIn ? L.T(t.Name) : t.Name;
+            var item = new ComboBoxItem { Content = lbl, Tag = t.Id };
+            templateBox.Items.Add(item);
+            if (t.Id == model.Settings.DefaultTemplateId) defTpl = item;
+        }
+        templateBox.SelectedItem = defTpl ?? (templateBox.Items.Count > 0 ? templateBox.Items[0] : null);
+        var tStack = new StackPanel();
+        tStack.Children.Add(new TextBlock { Text = "默认纪要模板", FontSize = 11.5, Foreground = Theme.Grey, Margin = new Thickness(2, 0, 0, 4) });
+        tStack.Children.Add(templateBox);
+        Grid.SetColumn(tStack, 2);
+        selectors.Children.Add(tStack);
+        panel.Children.Add(selectors);
 
         // Or paste a video link.
         var or = new Grid { Margin = new(0, 16, 0, 10) };
@@ -209,9 +255,21 @@ public sealed class MediaImportWindow : Window
         SubmitFiles(valid);
     }
 
+    private MediaImportOptions BuildOptions()
+    {
+        var gid = (groupBox.SelectedItem as ComboBoxItem)?.Tag as string;
+        if (string.IsNullOrWhiteSpace(gid)) gid = null;
+        var tid = (templateBox.SelectedItem as ComboBoxItem)?.Tag as string ?? model.Settings.DefaultTemplateId;
+        return new MediaImportOptions(
+            DistinguishVoices: speakersCheck.IsChecked == true,
+            GroupId: gid,
+            TemplateId: tid,
+            AutoGenerateNotes: autoNotesCheck.IsEnabled && autoNotesCheck.IsChecked == true);
+    }
+
     private void SubmitFiles(IEnumerable<string> paths)
     {
-        var added = model.Imports.EnqueueFiles(paths, speakersCheck.IsChecked == true);
+        var added = model.Imports.EnqueueFiles(paths, BuildOptions());
         if (added == 0)
         {
             hintNote.Text = "所选文件不在支持的音视频格式范围内。";
@@ -224,7 +282,7 @@ public sealed class MediaImportWindow : Window
 
     private void SubmitLink()
     {
-        if (!model.Imports.EnqueueLink(link.Text, speakersCheck.IsChecked == true)) return;
+        if (!model.Imports.EnqueueLink(link.Text, BuildOptions())) return;
         DialogResult = true;
         Close();
     }

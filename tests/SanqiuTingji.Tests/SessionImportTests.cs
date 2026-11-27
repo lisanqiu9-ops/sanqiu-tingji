@@ -93,6 +93,30 @@ public sealed class SessionImportTests : IDisposable
         Assert.Equal(new DateTime(2026, 10, 8, 2, 30, 0, DateTimeKind.Utc), start);
     }
 
+    [Fact]
+    public void ImportedHistoricSessionDistinguishesAddedAtFromOriginalStartedAt()
+    {
+        var store = new SessionStore(root);
+        var oldRecording = new DateTime(2026, 1, 15, 3, 21, 0, DateTimeKind.Utc);
+        var imported = new Session
+        {
+            Title = "历史录音",
+            StartedAt = oldRecording,
+            EndedAt = oldRecording.AddMinutes(10),
+            Renamed = true,
+            Lines = [new() { Id = "l1", T = 1, End = 5, Src = "你好" }],
+        };
+        var id = store.Import(imported);
+        var loaded = new SessionStore(root).Get(id)!;
+        Assert.Equal(oldRecording, loaded.StartedAt);
+        Assert.NotNull(loaded.CreatedAt);
+        Assert.True(loaded.AddedAt > oldRecording.AddMonths(1));
+
+        // Legacy sessions without CreatedAt gracefully fall back to StartedAt.
+        var legacy = new Session { StartedAt = oldRecording };
+        Assert.Equal(oldRecording, legacy.AddedAt);
+    }
+
     private static void WriteSyntheticMp4(string path, byte version, ulong creationSeconds)
     {
         static byte[] Be32(uint v) => [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];

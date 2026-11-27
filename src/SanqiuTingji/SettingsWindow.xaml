@@ -300,6 +300,15 @@
                                 </DockPanel>
                             </StackPanel>
                         </Border>
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <TextBlock Text="音视频导入" Style="{StaticResource Overline}"/>
+                                <CheckBox x:Name="DropImportConfirmOn" Style="{StaticResource SwitchRow}"
+                                          Content="拖入音视频文件时弹出参数确认窗口" Checked="Changed" Unchecked="Changed"/>
+                                <TextBlock Style="{StaticResource Helper}" TextWrapping="Wrap"
+                                           Text="开启时，把录音或视频拖入主窗口会先弹出确认卡，可选择是否区分发言人、目标分组、模板和自动生成纪要；关闭后拖入即按默认直接入队。"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

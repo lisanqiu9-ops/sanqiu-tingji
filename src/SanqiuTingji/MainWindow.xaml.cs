@@ -183,6 +183,16 @@ public partial class MainWindow : Window
 
     private void Settings_Click(object sender, RoutedEventArgs e) => ((App)Application.Current).OpenSettings();
 
+    private void LibrarySort_Click(object sender, RoutedEventArgs e)
+    {
+        model.Settings.LibrarySortByAdded = !model.Settings.LibrarySortByAdded;
+        model.SaveSettings();
+        RefreshList();
+        ShowGlassToast(model.Settings.LibrarySortByAdded
+            ? "已切换为「按最近添加/导入」排序"
+            : "已切换为「按会议原始时间」排序");
+    }
+
     private void RefreshList()
     {
         listTimer.Stop();
@@ -191,15 +201,34 @@ public partial class MainWindow : Window
         listShown = DateTime.Now;
         var q = SearchBox.Text.Trim();
         SearchHint.Visibility = q.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-        var rows = model.Store.All
+        var sortByAdded = model.Settings.LibrarySortByAdded;
+        if (LibrarySortBtn != null)
+        {
+            LibrarySortBtn.Content = sortByAdded ? "↕ 最近添加" : "↕ 会议时间";
+            LibrarySortBtn.ToolTip = sortByAdded
+                ? "当前按最近添加/导入时间排序，点击切换为按会议原始时间排序"
+                : "当前按会议原始录制时间排序，点击切换为按最近添加/导入时间排序";
+        }
+        var currentYear = DateTime.Now.Year;
+        var ordered = sortByAdded
+            ? model.Store.All.OrderByDescending(s => s.AddedAt).ThenByDescending(s => s.StartedAt)
+            : model.Store.All.OrderByDescending(s => s.StartedAt).ThenByDescending(s => s.AddedAt);
+        var rows = ordered
             .Where(InLibraryScope)
             .Where(s => SessionSearch.Matches(s, q) || (q.Length > 0 && DisplayTitle(s).Contains(q, StringComparison.OrdinalIgnoreCase)))
-            .Select(s => new SessionRow(s.Id, (s.Id == model.LiveSessionId ? "● " : "") + DisplayTitle(s),
-                L.F("{0:MM-dd HH:mm} · {1} · {2} 句", s.StartedAt.ToLocalTime(), Minutes(s), s.Lines.Count))
+            .Select(s =>
+            {
+                var local = s.StartedAt.ToLocalTime();
+                var stamp = local.Year == currentYear
+                    ? local.ToString("MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)
+                    : local.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+                return new SessionRow(s.Id, (s.Id == model.LiveSessionId ? "● " : "") + DisplayTitle(s),
+                    $"{stamp} · {Minutes(s)} · {L.F("{0} 句", s.Lines.Count)}")
                 {
                     Archived = model.Store.IsArchived(s.Id),
                     HasAudio = SanqiuTingji.Audio.MeetingAudioStore.FindAudioPath(model.Store, s.Id) != null,
-                })
+                };
+            })
             .ToList();
         var keep = selected;
         refreshingList = true;

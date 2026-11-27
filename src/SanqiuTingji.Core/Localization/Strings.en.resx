@@ -2302,4 +2302,7 @@ Choose another location, such as D:\Apps\SanqiuTingji.</value>
   <data name="工作部署与责任分工" xml:space="preserve">
     <value>Assignments &amp; accountability</value>
   </data>
+  <data name="{0} 句" xml:space="preserve">
+    <value>{0} lines</value>
+  </data>
 </root>

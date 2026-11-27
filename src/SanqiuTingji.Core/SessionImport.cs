@@ -11,6 +11,7 @@ public sealed partial class SessionStore
         // Copy before publishing so the decoder cannot keep changing the saved record.
         var copy = JsonSerializer.Deserialize<Session>(JsonSerializer.Serialize(session, Json.Options), Json.Options)!;
         copy.Id = Guid.NewGuid().ToString("N");
+        copy.CreatedAt ??= DateTime.UtcNow;
         var folder = Folder(copy.Id);
         Directory.CreateDirectory(folder);
         try

@@ -152,22 +152,26 @@
                         </Grid>
                     </Border>
 
-                    <!-- Non-blocking Background Media Import Task Card (auto-hides when idle) -->
+                    <!-- Non-blocking Background Media Import Task Card (auto-hides when idle, click to open queue popover) -->
                     <Border x:Name="ImportTaskCard" Visibility="Collapsed" Margin="0,12,0,0" CornerRadius="12" Padding="11,9"
-                            Background="#EEF6FF" BorderBrush="#40007AFF" BorderThickness="1">
+                            Background="#EEF6FF" BorderBrush="#4DA3FF" BorderThickness="1.2" Cursor="Hand"
+                            MouseLeftButtonUp="ImportTaskCard_Click" ToolTip="点击查看或管理全部导入队列">
                         <StackPanel>
                             <DockPanel>
-                                <Button x:Name="ImportCancelBtn" DockPanel.Dock="Right" Content="&#xE711;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                        FontSize="9.5" Style="{StaticResource GhostBtn}" Foreground="{StaticResource Muted}" Padding="4" Width="20" Height="20"
-                                        ToolTip="取消当前导入任务" Click="CancelImport_Click"/>
-                                <Border x:Name="ImportQueueBadge" DockPanel.Dock="Right" Visibility="Collapsed" Background="#1F007AFF" CornerRadius="6"
-                                        Padding="6,1" Margin="4,0,4,0" VerticalAlignment="Center">
-                                    <TextBlock x:Name="ImportQueueBadgeText" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource Primary}"/>
+                                <Button x:Name="ImportCancelBtn" DockPanel.Dock="Right" Style="{StaticResource GhostBtn}"
+                                        Padding="4" Width="20" Height="20" ToolTip="停止当前导入任务" Click="CancelImport_Click">
+                                    <Canvas Width="10" Height="10">
+                                        <Path Data="M2,2 L8,8 M8,2 L2,8" Stroke="{StaticResource Muted}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                    </Canvas>
+                                </Button>
+                                <Border x:Name="ImportQueueBadge" DockPanel.Dock="Right" Visibility="Collapsed" Background="{StaticResource Primary}" CornerRadius="9"
+                                        Padding="7,1.5" Margin="4,0,5,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="ImportQueueBadgeText" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
                                 </Border>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <Ellipse Width="7" Height="7" Fill="{StaticResource Primary}" VerticalAlignment="Center" Margin="0,0,7,0"/>
                                     <TextBlock x:Name="ImportTaskTitle" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Ink}"
-                                               TextTrimming="CharacterEllipsis" MaxWidth="158"/>
+                                               TextTrimming="CharacterEllipsis" MaxWidth="148"/>
                                 </StackPanel>
                             </DockPanel>
                             <ProgressBar x:Name="ImportTaskBar" Minimum="0" Maximum="1" Height="4" Margin="0,7,0,0"/>
@@ -175,11 +179,53 @@
                                        Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
                             <TextBlock x:Name="ImportTaskDetail" FontSize="10.5" Foreground="{StaticResource Muted}"
                                        Margin="0,2,0,0" TextWrapping="Wrap"/>
+                            <Border BorderBrush="#26007AFF" BorderThickness="0,1,0,0" Margin="0,6,0,0" Padding="0,5,0,0">
+                                <DockPanel>
+                                    <TextBlock x:Name="ImportQueueHintState" DockPanel.Dock="Right" Text="展开 ▸" FontSize="10" Foreground="{StaticResource Primary}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="点击查看或管理全部队列" FontSize="10" Foreground="{StaticResource Primary}"/>
+                                </DockPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
 
+                    <!-- Floating Right-Side Import Queue Popover (same glass language as NoticePopup) -->
+                    <Popup x:Name="ImportQueuePopup" PlacementTarget="{Binding ElementName=ImportTaskCard}" Placement="Right"
+                           HorizontalOffset="10" VerticalOffset="-8" StaysOpen="False" AllowsTransparency="True"
+                           PopupAnimation="Fade" Opened="ImportQueuePopup_Opened" Closed="ImportQueuePopup_Closed">
+                        <Border Width="396" Margin="6,6,14,14" Background="#FAFFFFFF" BorderBrush="#2A007AFF"
+                                BorderThickness="1" CornerRadius="16" Padding="15,13">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="26" ShadowDepth="8" Direction="270" Opacity="0.16" Color="#0C1933"/>
+                            </Border.Effect>
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,10">
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="＋ 继续添加" Style="{StaticResource Btn}" FontSize="11" Padding="9,4"
+                                                Foreground="{StaticResource Primary}" Click="ImportMedia_Click"/>
+                                        <Button x:Name="ImportClearPendingBtn" Content="清空等待" Style="{StaticResource GhostBtn}"
+                                                FontSize="11" Padding="8,4" Margin="4,0,0,0" Foreground="#C93B3B"
+                                                Visibility="Collapsed" Click="ClearPendingImports_Click"/>
+                                    </StackPanel>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="导入任务队列" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
+                                        <TextBlock x:Name="ImportQueueSummaryText" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                                <Border Height="1" Background="#1416284C" Margin="0,0,0,10"/>
+                                <ScrollViewer MaxHeight="430" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="ImportQueueListHost"/>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+
                     <DockPanel Margin="4,14,0,0">
-                        <Button DockPanel.Dock="Right" Content="＋" Width="26" FontSize="16" Padding="2" Style="{StaticResource GhostBtn}" Foreground="{StaticResource Muted}" ToolTip="{local:Loc Key='新建分组'}" AutomationProperties.Name="{local:Loc Key='新建分组'}" Click="NewGroup_Click"/>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="LibrarySortBtn" Content="↕ 最近添加" Style="{StaticResource GhostBtn}" FontSize="11"
+                                    Foreground="{StaticResource Muted}" Padding="6,2" Margin="0,0,2,0"
+                                    ToolTip="切换左侧排序方式：按最近添加/导入 或 按会议原始时间" Click="LibrarySort_Click"/>
+                            <Button Content="＋" Width="26" FontSize="16" Padding="2" Style="{StaticResource GhostBtn}" Foreground="{StaticResource Muted}" ToolTip="{local:Loc Key='新建分组'}" AutomationProperties.Name="{local:Loc Key='新建分组'}" Click="NewGroup_Click"/>
+                        </StackPanel>
                         <TextBlock Text="{local:Loc Key='分组'}" Foreground="{StaticResource Faint}" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </DockPanel>
                 </StackPanel>

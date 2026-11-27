@@ -40,6 +40,10 @@ public sealed class AppSettings
     public bool RedoSpeakers { get; set; } = true;
     /// Keep a compact M4A recording inside each meeting folder for synchronized playback (deletable independently).
     public bool SaveMeetingAudio { get; set; } = true;
+    /// Skip the lightweight parameter confirmation modal when dragging audio/video files onto the main window.
+    public bool SkipDropImportConfirm { get; set; }
+    /// Order meetings in the sidebar by when they were added/imported (true) vs. their original recording date (false).
+    public bool LibrarySortByAdded { get; set; } = true;
     /// Notes updated every ~45 s while the meeting runs; off by default for local/no-API workflow.
     public bool LiveNotes { get; set; }
     /// Automatically check GitHub Releases for newer versions of SanqiuTingji. On by default.

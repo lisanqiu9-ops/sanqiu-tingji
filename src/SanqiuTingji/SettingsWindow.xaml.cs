@@ -52,6 +52,7 @@ public partial class SettingsWindow : Window
         FillMics();
 
         FollowApps.IsChecked = s.FollowMeetingApps;
+        DropImportConfirmOn.IsChecked = !s.SkipDropImportConfirm;
         AutoCliEndOn.IsChecked = s.AutoCliNotesOnEnd;
         Fill(SilenceBox, [("Prompt", L.T("先提醒再结束")), ("End", L.T("直接结束")), ("Off", L.T("不处理"))], s.SilenceEnd.ToString());
         Fill(SilenceMinBox, new[] { 5, 10, 15, 30 }.Select(m => (m.ToString(), L.F("{0} 分钟", m))).ToArray(), s.SilenceMinutes.ToString());
@@ -135,6 +136,7 @@ public partial class SettingsWindow : Window
         if (TagOf(TemplateDefaultBox) is { Length: > 0 } tid) s.DefaultTemplateId = tid;
         s.ListenMicId = TagOf(ListenMicBox) is { Length: > 0 } room ? room : null;
         s.FollowMeetingApps = FollowApps.IsChecked == true;
+        s.SkipDropImportConfirm = DropImportConfirmOn.IsChecked != true;
         s.AutoCliNotesOnEnd = AutoCliEndOn.IsChecked == true;
         s.SilenceEnd = Enum.TryParse<MeetingEndWatch.Silence>(TagOf(SilenceBox), out var sil) ? sil : MeetingEndWatch.Silence.Prompt;
         s.SilenceMinutes = int.TryParse(TagOf(SilenceMinBox), out var m) ? m : 10;

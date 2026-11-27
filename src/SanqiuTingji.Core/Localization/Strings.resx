@@ -2302,4 +2302,7 @@
   <data name="工作部署与责任分工" xml:space="preserve">
     <value>工作部署与责任分工</value>
   </data>
+  <data name="{0} 句" xml:space="preserve">
+    <value>{0} 句</value>
+  </data>
 </root>

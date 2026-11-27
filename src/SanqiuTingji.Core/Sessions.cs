@@ -53,6 +53,9 @@ public sealed class Session
     public string Title { get; set; } = "";
     public DateTime StartedAt { get; set; }
     public DateTime? EndedAt { get; set; }
+    /// When this meeting was added/imported into the app (UTC); older records fall back to StartedAt.
+    public DateTime? CreatedAt { get; set; }
+    [JsonIgnore] public DateTime AddedAt => (CreatedAt ?? StartedAt).ToUniversalTime();
     public List<TranscriptLine> Lines { get; set; } = [];
     public bool HasAudio { get; set; }
     public MeetingNotes? Notes { get; set; }
@@ -182,6 +185,7 @@ public sealed partial class SessionStore
             Id = now.ToLocalTime().ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture),
             Title = Session.DefaultTitle(now),
             StartedAt = now,
+            CreatedAt = now,
         };
         lock (gate)
         {
@@ -272,7 +276,7 @@ public sealed partial class SessionStore
             var s = sessions.FirstOrDefault(x => x.Id == id);
             return s == null ? null : new Session
             {
-                Id = s.Id, Title = s.Title, StartedAt = s.StartedAt, EndedAt = s.EndedAt, Lines = s.Lines.ToList(),
+                Id = s.Id, Title = s.Title, StartedAt = s.StartedAt, EndedAt = s.EndedAt, CreatedAt = s.CreatedAt, Lines = s.Lines.ToList(),
                 HasAudio = s.HasAudio, Notes = s.Notes, Renamed = s.Renamed, TemplateId = s.TemplateId,
                 VoiceNames = s.VoiceNames == null ? null : new(s.VoiceNames),
                 VoiceGuesses = s.VoiceGuesses == null ? null : new(s.VoiceGuesses),
