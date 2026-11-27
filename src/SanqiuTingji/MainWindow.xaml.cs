@@ -1080,21 +1080,88 @@ public partial class MainWindow : Window
     private void Export_Click(object sender, RoutedEventArgs e)
     {
         if (selected == null || sender is not Button button) return;
+        var hasNotes = model.Store.Get(selected)?.Notes is { IsEmpty: false };
         var menu = new ContextMenu { PlacementTarget = button, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
-        foreach (var (label, extension) in new[] { ("Word 文档 (.docx)", ".docx"), ("Markdown (.md)", ".md"), ("文本 (.txt)", ".txt") })
+
+        MenuItem SectionHeader(string text) => new()
         {
-            var item = UiText.Bind(new MenuItem(), ("Header", () => L.T(label)));
-            item.Click += (_, _) => ExportTo(extension);
+            Header = text,
+            IsEnabled = false,
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Theme.Grey,
+        };
+
+        menu.Items.Add(SectionHeader("AI 会议纪要（不含逐字稿）"));
+        var formalWord = new MenuItem { Header = "正式会议纪要（Word 表格版 .docx）" };
+        formalWord.Click += (_, _) => ExportFormalMinutes(".docx");
+        menu.Items.Add(formalWord);
+
+        var notesMd = new MenuItem { Header = "仅会议纪要（Markdown .md）" };
+        notesMd.Click += (_, _) => ExportFormalMinutes(".md");
+        menu.Items.Add(notesMd);
+
+        var notesTxt = new MenuItem { Header = "仅会议纪要（纯文本 .txt）" };
+        notesTxt.Click += (_, _) => ExportFormalMinutes(".txt");
+        menu.Items.Add(notesTxt);
+
+        if (!hasNotes)
+        {
+            formalWord.ToolTip = notesMd.ToolTip = notesTxt.ToolTip = "当前会议尚未生成 AI 纪要，请先点「生成纪要」";
+        }
+
+        menu.Items.Add(new Separator());
+        menu.Items.Add(SectionHeader("纪要 + 完整逐字稿（存档版）"));
+        foreach (var (label, extension) in new[]
+        {
+            ("纪要 + 逐字稿（Word .docx）", ".docx"),
+            ("纪要 + 逐字稿（Markdown .md）", ".md"),
+            ("纪要 + 逐字稿（纯文本 .txt）", ".txt"),
+        })
+        {
+            var item = new MenuItem { Header = label };
+            item.Click += (_, _) => ExportFullArchive(extension);
             menu.Items.Add(item);
         }
         button.ContextMenu = menu;
         menu.IsOpen = true;
     }
 
-    private void ExportTo(string extension)
+    private void ExportFormalMinutes(string extension)
     {
         if (selected == null || model.Store.Snapshot(selected) is not { } s) return;
-        var name = string.Concat(s.DisplayTitle.Split(Path.GetInvalidFileNameChars()));
+        if (s.Notes is null or { IsEmpty: true })
+        {
+            Dialog.Confirm(this, "还没有会议纪要", "这场会议目前只有逐字稿，还没有 AI 总结的纪要。请先点右上角「生成纪要」，或改用「纪要 + 完整逐字稿」导出。", "知道了");
+            return;
+        }
+
+        var meta = FormalMinutesMeta.FromSession(s);
+        var baseName = s.DisplayTitle;
+        var fileStem = baseName.Contains("纪要", StringComparison.Ordinal) ? baseName : baseName + "_会议纪要";
+        WriteExportFile(fileStem, extension, tempPath =>
+        {
+            if (extension == ".docx") File.WriteAllBytes(tempPath, WordExport.CreateFormalMinutes(s, meta));
+            else if (extension == ".md") File.WriteAllText(tempPath, TranscriptExport.NotesOnlyMarkdown(s, meta), new System.Text.UTF8Encoding(false));
+            else File.WriteAllText(tempPath, TranscriptExport.NotesOnlyPlainText(s, meta), new System.Text.UTF8Encoding(true));
+        });
+    }
+
+    private void ExportFullArchive(string extension)
+    {
+        if (selected == null || model.Store.Snapshot(selected) is not { } s) return;
+        WriteExportFile(s.DisplayTitle + "_纪要与逐字稿", extension, tempPath =>
+        {
+            if (extension == ".docx") File.WriteAllBytes(tempPath, WordExport.Create(s, model.Settings.IncludeTranslationInExport));
+            else if (extension == ".md") File.WriteAllText(tempPath, TranscriptExport.Markdown(s, model.Settings.IncludeTranslationInExport), new System.Text.UTF8Encoding(false));
+            else File.WriteAllText(tempPath, TranscriptExport.PlainText(s, model.Settings.IncludeTranslationInExport), new System.Text.UTF8Encoding(true));
+        });
+    }
+
+    private void WriteExportFile(string rawStem, string extension, Action<string> writer)
+    {
+        var name = string.Concat(rawStem.Split(Path.GetInvalidFileNameChars())).Trim();
+        if (name.Length == 0) name = "会议纪要";
         var filter = extension == ".docx" ? L.T("Word 文档 (.docx)") : extension == ".md" ? "Markdown (.md)" : L.T("文本 (.txt)");
         var dlg = new SaveFileDialog { FileName = name + extension, Filter = filter + "|*" + extension, DefaultExt = extension, AddExtension = true };
         if (!string.IsNullOrWhiteSpace(model.Settings.DefaultExportDirectory) && Directory.Exists(model.Settings.DefaultExportDirectory))
@@ -1103,8 +1170,7 @@ public partial class MainWindow : Window
         var temporary = dlg.FileName + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            if (extension == ".docx") File.WriteAllBytes(temporary, WordExport.Create(s, model.Settings.IncludeTranslationInExport));
-            else File.WriteAllText(temporary, TranscriptExport.Markdown(s, model.Settings.IncludeTranslationInExport));
+            writer(temporary);
             File.Move(temporary, dlg.FileName, overwrite: true);
             ShowGlassToast($"已导出：{Path.GetFileName(dlg.FileName)}");
         }

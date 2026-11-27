@@ -116,9 +116,10 @@ public static class Snapshot
         Prepare(ready);
         ready.ShowReady();
         Save(ready, folder, "panel-ready");
-        Save(UpdateWindow.ForSnapshot(model, App.Updates, "0.1.5",
-            ["单击托盘图标先打开面板，点「开始会议」才开始录制", "在实时面板里点发言人的名字就能改名，纪要跟着变",
-             "新的删除按钮和确认弹窗", "发现新版本时先问你，点「立即更新」才下载"]), folder, "update");
+        Save(UpdateWindow.ForSnapshot(model, App.Updates, "1.0.12",
+            ["自动检查发现新版本时改为右下角轻量提醒，不抢焦点、点一下即可关闭", "主动点「立即更新」或「查看详情」时切入完整更新窗口，支持进度查看与最小化"]), folder, "update");
+        Save(UpdateToastWindow.ForSnapshot(model, App.Updates, "1.0.12",
+            ["自动检查发现新版本时改为右下角轻量提醒，不抢焦点、点一下即可关闭", "主动点「立即更新」或「查看详情」时切入完整更新窗口"]), folder, "update-toast");
         Save(Dialog.ForSnapshot("删除「11月4日 支付项目周会」？", "逐字稿和纪要会一起删掉，删除后无法恢复。", "删除", true), folder, "dialog-delete");
 
         var subs = new SubtitleWindow(model);

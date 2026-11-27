@@ -2308,4 +2308,13 @@
   <data name="最小化" xml:space="preserve">
     <value>最小化</value>
   </data>
+  <data name="暂不更新" xml:space="preserve">
+    <value>暂不更新</value>
+  </data>
+  <data name="查看详情" xml:space="preserve">
+    <value>查看详情</value>
+  </data>
+  <data name="新版本已就绪，点击查看更新内容" xml:space="preserve">
+    <value>新版本已就绪，点击查看更新内容</value>
+  </data>
 </root>

@@ -21,24 +21,29 @@ public sealed class UpdateWindow : Window
     private readonly ProgressBar bar;
     private readonly TextBlock status;
     private readonly System.Windows.Documents.Run targetRun;
+    private bool downloading;
+
+    public static bool IsOpen => open != null;
 
     /// Shows the box for the available version (brings it back if it's already open).
-    public static void ShowFor(AppModel model, Updates updates)
+    public static void ShowFor(AppModel model, Updates updates, bool startImmediately = false)
     {
         if (updates.AvailableVersion == null) return;
+        UpdateToastWindow.DismissIfOpen();
         if (open != null)
         {
             if (open.WindowState == WindowState.Minimized) open.WindowState = WindowState.Normal;
             open.Activate();
+            if (startImmediately && !open.downloading) _ = open.UpdateNow();
             return;
         }
-        open = new UpdateWindow(model, updates, updates.AvailableVersion, null);
+        open = new UpdateWindow(model, updates, updates.AvailableVersion, null, startImmediately);
         open.Closed += (_, _) => open = null;
         open.Show();
         open.Activate();
     }
 
-    private UpdateWindow(AppModel model, Updates updates, string next, List<string>? presetNotes)
+    private UpdateWindow(AppModel model, Updates updates, string next, List<string>? presetNotes, bool startImmediately = false)
     {
         this.model = model;
         this.updates = updates;
@@ -99,12 +104,36 @@ public sealed class UpdateWindow : Window
         titleRow.Children.Add(new Image { Source = Icons.Mark(64, false), Width = 30, Height = 30, Margin = new Thickness(0, 0, 10, 0) });
         titleRow.Children.Add(UiText.Bind(new TextBlock { Text = L.T("发现新版本"), FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = ink, VerticalAlignment = VerticalAlignment.Center }, ("Text", () => L.T("发现新版本"))));
 
-        // v0.1.4 ▷ v0.1.5
-        var jump = new TextBlock { FontSize = 13, Margin = new Thickness(0, 16, 0, 0), FontFamily = new FontFamily("Consolas, Microsoft YaHei UI") };
-        jump.Inlines.Add(new System.Windows.Documents.Run($"v{updates.Version}") { Foreground = grey });
-        jump.Inlines.Add(new System.Windows.Documents.Run("  ▷  ") { Foreground = grey });
+        // v1.0.10 -> v1.0.11 with crisp vector arrow (avoids hollow glyph fallback)
+        var arrowIcon = new Canvas { Width = 14, Height = 10, Margin = new Thickness(8, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
+        arrowIcon.Children.Add(new System.Windows.Shapes.Path
+        {
+            Data = Geometry.Parse("M1,5 L12,5 M8.5,1.8 L12.2,5 L8.5,8.2"),
+            Stroke = grey,
+            StrokeThickness = 1.4,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round,
+        });
+        var jump = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        jump.Children.Add(new TextBlock
+        {
+            Text = $"v{updates.Version}",
+            FontSize = 13,
+            FontFamily = new FontFamily("Consolas, Microsoft YaHei UI"),
+            Foreground = grey,
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        jump.Children.Add(arrowIcon);
         targetRun = new System.Windows.Documents.Run($"v{next}") { Foreground = Theme.Primary, FontWeight = FontWeights.Bold };
-        jump.Inlines.Add(targetRun);
+        var targetText = new TextBlock
+        {
+            FontSize = 13,
+            FontFamily = new FontFamily("Consolas, Microsoft YaHei UI"),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        targetText.Inlines.Add(targetRun);
+        jump.Children.Add(targetText);
 
         notesHost.Margin = new Thickness(0, 2, 8, 2);
         notesHost.Children.Add(UiText.Bind(new TextBlock { Text = L.T("正在读取更新内容…"), Foreground = grey, FontSize = 13 }, ("Text", () => L.T("正在读取更新内容…"))));
@@ -144,7 +173,11 @@ public sealed class UpdateWindow : Window
         };
         MouseLeftButtonDown += (_, e) => { if (e.ButtonState == MouseButtonState.Pressed) DragMove(); };
         if (presetNotes != null) ShowNotes(presetNotes);
-        else Loaded += async (_, _) => ShowNotes(await updates.Notes());
+        else Loaded += async (_, _) =>
+        {
+            ShowNotes(await updates.Notes());
+            if (startImmediately && !downloading) await UpdateNow();
+        };
     }
 
     private void ShowNotes(List<string> lines)
@@ -172,6 +205,8 @@ public sealed class UpdateWindow : Window
 
     private async Task UpdateNow()
     {
+        if (downloading) return;
+        downloading = true;
         later.IsEnabled = now.IsEnabled = false;
         UiText.Set(now, "Content", () => L.T("下载中…"));
         bar.Visibility = Visibility.Visible;
@@ -191,6 +226,7 @@ public sealed class UpdateWindow : Window
         }));
         if (!ok)
         {
+            downloading = false;
             bar.Visibility = Visibility.Collapsed;
             UiText.Set(status, "Text", () => L.T("下载失败，请检查网络后再试。"));
             UiText.Set(now, "Content", () => L.T("重试"));

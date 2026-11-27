@@ -452,4 +452,255 @@ public static class TranscriptExport
         }
         return sb.ToString();
     }
+
+    /// AI-summarized formal meeting minutes only (Markdown, without raw transcript).
+    public static string NotesOnlyMarkdown(Session s, FormalMinutesMeta? meta = null)
+    {
+        meta ??= FormalMinutesMeta.FromSession(s);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("# 会议纪要");
+        sb.AppendLine();
+        sb.AppendLine($"- **会议名称**：{meta.MeetingName}");
+        sb.AppendLine($"- **会议时间**：{meta.MeetingTime}");
+        if (!string.IsNullOrWhiteSpace(meta.Location)) sb.AppendLine($"- **会议地点**：{meta.Location}");
+        if (!string.IsNullOrWhiteSpace(meta.Attendees)) sb.AppendLine($"- **参会人员**：{meta.Attendees.Replace("\r\n", "、").Replace('\n', '、')}");
+        if (!string.IsNullOrWhiteSpace(meta.Host)) sb.AppendLine($"- **会议主持人**：{meta.Host}");
+        sb.AppendLine();
+
+        if (s.Notes is { IsEmpty: false } written)
+        {
+            var n = SpeakerLabels.WithNames(written, SpeakerLabels.Names(s));
+            sb.AppendLine("## 会议议程");
+            sb.AppendLine();
+            if (n.Topics.Count > 0)
+            {
+                for (var i = 0; i < n.Topics.Count; i++)
+                    sb.AppendLine($"{i + 1}. {n.Topics[i].Title}");
+            }
+            else if (!string.IsNullOrWhiteSpace(n.Summary))
+            {
+                sb.AppendLine($"1. {n.Summary}");
+            }
+            sb.AppendLine();
+
+            sb.AppendLine("## 会议纪要");
+            sb.AppendLine();
+            if (!string.IsNullOrWhiteSpace(n.Summary))
+            {
+                sb.AppendLine(n.Summary);
+                sb.AppendLine();
+            }
+            var idx = 0;
+            foreach (var t in n.Topics)
+            {
+                idx++;
+                sb.AppendLine($"### {WordExport.ChineseSectionNum(idx)}、{t.Title}");
+                sb.AppendLine();
+                if (!string.IsNullOrWhiteSpace(t.Summary)) sb.AppendLine(t.Summary);
+                for (var i = 0; i < t.Points.Count; i++)
+                    sb.AppendLine($"- {t.Points[i]}");
+                if (t.Fishbone is { } f)
+                {
+                    sb.AppendLine($"- 原因分析：{f.Question}");
+                    foreach (var b in f.Branches) sb.AppendLine($"  - {b.Label}：{b.Detail}");
+                }
+                sb.AppendLine();
+            }
+            foreach (var part in n.Parts().Where(p => p.Style != "todo" && p.Items.Count > 0))
+            {
+                idx++;
+                sb.AppendLine($"### {WordExport.ChineseSectionNum(idx)}、{part.Title}");
+                sb.AppendLine();
+                foreach (var i in part.Items)
+                {
+                    var extra = new[] { i.Owner, i.Due }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+                    sb.AppendLine($"- {i.Text}{(extra.Count > 0 ? $"（{string.Join("，", extra)}）" : "")}");
+                }
+                sb.AppendLine();
+            }
+
+            var todos = n.Parts().Where(p => p.Style == "todo").SelectMany(p => p.Items).Where(i => !string.IsNullOrWhiteSpace(i.Text)).ToList();
+            if (todos.Count > 0)
+            {
+                sb.AppendLine("## 督办事项");
+                sb.AppendLine();
+                sb.AppendLine("| 序号 | 事项 | 责任人 | 完成时限 |");
+                sb.AppendLine("|---|---|---|---|");
+                for (var i = 0; i < todos.Count; i++)
+                    sb.AppendLine($"| {i + 1} | {todos[i].Text} | {todos[i].Owner ?? "—"} | {todos[i].Due ?? "—"} |");
+                sb.AppendLine();
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(meta.Recorder) || !string.IsNullOrWhiteSpace(meta.RecordDate))
+        {
+            sb.AppendLine("---");
+            sb.AppendLine();
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(meta.Recorder)) parts.Add($"记录人：{meta.Recorder}");
+            if (!string.IsNullOrWhiteSpace(meta.RecordDate)) parts.Add($"记录时间：{meta.RecordDate}");
+            sb.AppendLine(string.Join("　　", parts));
+        }
+        return sb.ToString();
+    }
+
+    /// AI-summarized formal meeting minutes only (clean plain text without Markdown punctuation).
+    public static string NotesOnlyPlainText(Session s, FormalMinutesMeta? meta = null)
+    {
+        meta ??= FormalMinutesMeta.FromSession(s);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("会议纪要");
+        sb.AppendLine(new string('=', 36));
+        sb.AppendLine($"会议名称：{meta.MeetingName}");
+        sb.AppendLine($"会议时间：{meta.MeetingTime}");
+        if (!string.IsNullOrWhiteSpace(meta.Location)) sb.AppendLine($"会议地点：{meta.Location}");
+        if (!string.IsNullOrWhiteSpace(meta.Attendees)) sb.AppendLine($"参会人员：{meta.Attendees.Replace("\r\n", "、").Replace('\n', '、')}");
+        if (!string.IsNullOrWhiteSpace(meta.Host)) sb.AppendLine($"会议主持人：{meta.Host}");
+        sb.AppendLine();
+
+        if (s.Notes is { IsEmpty: false } written)
+        {
+            var n = SpeakerLabels.WithNames(written, SpeakerLabels.Names(s));
+            sb.AppendLine("【会议议程】");
+            if (n.Topics.Count > 0)
+            {
+                for (var i = 0; i < n.Topics.Count; i++)
+                    sb.AppendLine($"{i + 1}、{n.Topics[i].Title}");
+            }
+            else if (!string.IsNullOrWhiteSpace(n.Summary))
+            {
+                sb.AppendLine($"1、{n.Summary}");
+            }
+            sb.AppendLine();
+
+            sb.AppendLine("【会议纪要】");
+            if (!string.IsNullOrWhiteSpace(n.Summary))
+            {
+                sb.AppendLine(n.Summary);
+                sb.AppendLine();
+            }
+            var idx = 0;
+            foreach (var t in n.Topics)
+            {
+                idx++;
+                sb.AppendLine($"{WordExport.ChineseSectionNum(idx)}、{t.Title}：");
+                if (!string.IsNullOrWhiteSpace(t.Summary)) sb.AppendLine($"  {t.Summary}");
+                for (var i = 0; i < t.Points.Count; i++)
+                    sb.AppendLine($"  {i + 1}）{t.Points[i]}");
+                if (t.Fishbone is { } f)
+                {
+                    sb.AppendLine($"  原因分析：{f.Question}");
+                    foreach (var b in f.Branches) sb.AppendLine($"    - {b.Label}：{b.Detail}");
+                }
+                sb.AppendLine();
+            }
+            foreach (var part in n.Parts().Where(p => p.Style != "todo" && p.Items.Count > 0))
+            {
+                idx++;
+                sb.AppendLine($"{WordExport.ChineseSectionNum(idx)}、{part.Title}：");
+                for (var i = 0; i < part.Items.Count; i++)
+                {
+                    var item = part.Items[i];
+                    var extra = new[] { item.Owner, item.Due }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+                    sb.AppendLine($"  {i + 1}）{item.Text}{(extra.Count > 0 ? $"（{string.Join("，", extra)}）" : "")}");
+                }
+                sb.AppendLine();
+            }
+
+            var todos = n.Parts().Where(p => p.Style == "todo").SelectMany(p => p.Items).Where(i => !string.IsNullOrWhiteSpace(i.Text)).ToList();
+            if (todos.Count > 0)
+            {
+                sb.AppendLine("【督办事项】");
+                for (var i = 0; i < todos.Count; i++)
+                {
+                    var item = todos[i];
+                    var tags = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(item.Owner)) tags.Add($"责任人：{item.Owner.Trim()}");
+                    if (!string.IsNullOrWhiteSpace(item.Due)) tags.Add($"完成时限：{item.Due.Trim()}");
+                    sb.AppendLine($"{i + 1}、{item.Text.Trim()}{(tags.Count > 0 ? $"（{string.Join("；", tags)}）" : "")}");
+                }
+                sb.AppendLine();
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(meta.Recorder) || !string.IsNullOrWhiteSpace(meta.RecordDate))
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(meta.Recorder)) parts.Add($"记录人：{meta.Recorder}");
+            if (!string.IsNullOrWhiteSpace(meta.RecordDate)) parts.Add($"记录时间：{meta.RecordDate}");
+            sb.AppendLine(string.Join("　　", parts));
+        }
+        return sb.ToString();
+    }
+
+    /// Clean plain text export with both AI notes and full timestamped transcript (no Markdown markers).
+    public static string PlainText(Session s, bool includeTranslation = true)
+    {
+        var sb = new System.Text.StringBuilder();
+        var start = s.StartedAt.ToLocalTime();
+        string At(double seconds) => NotesPrompt.ClockAt(start, seconds);
+        var end = s.EndedAt?.ToLocalTime();
+        sb.AppendLine(s.DisplayTitle);
+        sb.AppendLine($"{NotesPrompt.When(start)}{(end != null ? $" - {end:HH:mm}" : "")} | 时长 {Clock(s.Duration.TotalSeconds)}");
+        sb.AppendLine(new string('=', 36));
+        sb.AppendLine();
+
+        if (s.Notes is { IsEmpty: false } written)
+        {
+            var n = SpeakerLabels.WithNames(written, SpeakerLabels.Names(s));
+            sb.AppendLine("【纪要】");
+            if (n.Summary.Length > 0)
+            {
+                sb.AppendLine(n.Summary);
+                sb.AppendLine();
+            }
+            if (n.Topics.Count > 0)
+            {
+                var idx = 0;
+                foreach (var t in n.Topics)
+                {
+                    idx++;
+                    sb.AppendLine($"{WordExport.ChineseSectionNum(idx)}、{t.Title}（{At(t.Start)}）");
+                    if (!string.IsNullOrWhiteSpace(t.Summary)) sb.AppendLine($"  {t.Summary}");
+                    for (var i = 0; i < t.Points.Count; i++)
+                        sb.AppendLine($"  {i + 1}）{t.Points[i]}{(t.PointTime(i) is { } pt ? $"（{At(pt)}）" : "")}");
+                    if (t.Fishbone is { } f)
+                    {
+                        sb.AppendLine($"  原因分析：{f.Question}");
+                        foreach (var b in f.Branches) sb.AppendLine($"    - {b.Label}：{b.Detail}");
+                    }
+                    sb.AppendLine();
+                }
+            }
+            foreach (var part in n.Parts().Where(p => p.Items.Count > 0))
+            {
+                sb.AppendLine($"【{part.Title}】");
+                for (var i = 0; i < part.Items.Count; i++)
+                {
+                    var item = part.Items[i];
+                    var extra = new[] { item.Owner, item.Due }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+                    sb.AppendLine($"{i + 1}、{item.Text}{(extra.Count > 0 ? $"（{string.Join("，", extra)}）" : "")}");
+                }
+                sb.AppendLine();
+            }
+            if (n.Terms.Count > 0)
+            {
+                sb.AppendLine("【人名与术语】");
+                foreach (var t in NoteTerm.Ordered(n.Terms))
+                    sb.AppendLine($"- {t.Name}：{t.Note}{(t.Heard.Count > 0 ? $"（识别成 {string.Join("、", t.Heard)}）" : "")}");
+                sb.AppendLine();
+            }
+        }
+
+        sb.AppendLine("【逐字稿】");
+        var numbers = SpeakerLabels.Numbers(s.Lines);
+        var names = SpeakerLabels.Names(s);
+        foreach (var l in s.Lines)
+        {
+            var who = SpeakerLabels.Who(l, numbers, names);
+            sb.AppendLine($"[{At(l.T)}] {who}：{l.Src}");
+            if (includeTranslation && !string.IsNullOrEmpty(l.Dst)) sb.AppendLine($"  {l.Dst}");
+        }
+        return sb.ToString();
+    }
 }

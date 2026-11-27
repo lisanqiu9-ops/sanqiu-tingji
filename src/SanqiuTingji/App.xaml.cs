@@ -152,11 +152,11 @@ public partial class App : Application
         updateTimer.Tick += async (_, _) =>
         {
             updateTimer.Interval = TimeSpan.FromHours(6);
-            // Found a newer version: ask once per version per run (下次提醒 means "next time I start").
+            // Found a newer version: notify non-intrusively in the bottom-right corner once per version per run.
             if (await Updates.Check() && Updates.AvailableVersion != toldAbout)
             {
                 toldAbout = Updates.AvailableVersion;
-                UpdateWindow.ShowFor(Model, Updates);
+                UpdateToastWindow.ShowFor(Model, Updates);
             }
         };
         updateTimer.Start();
