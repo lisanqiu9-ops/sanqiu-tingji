@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text;
-using Microsoft.Win32;
 
 namespace SanqiuTingji;
 
@@ -45,7 +44,7 @@ public sealed record CliDetectedItem(CliBridgePreset Preset, string? ResolvedPat
 
 public sealed record CliTestResult(bool Success, string Message, long ElapsedMs);
 
-/// Universal local AI CLI bridge: supports Antigravity (agy), WorkBuddy / CodeBuddy, OpenAI Codex,
+/// Universal local AI CLI bridge: supports Antigravity (agy), OpenAI Codex,
 /// Google Gemini CLI, Claude Code CLI, and any custom local command without requiring paid HTTP API keys.
 public static class CliBridge
 {
@@ -60,12 +59,6 @@ public static class CliBridge
             "使用本机已登录的 Antigravity 订阅，已自动匹配路径与参数。",
             ["agy.exe", "agy.cmd", "agy.bat"],
             "请先安装并登录 Antigravity 客户端后重新扫描"),
-        new("workbuddy", "WorkBuddy / CodeBuddy", "codebuddy",
-            "-p --output-format text",
-            CliInputMode.Stdin, "--model",
-            "复用本机已登录的腾讯 WorkBuddy 桌面端或 CodeBuddy CLI 额度，免配 API Key。",
-            ["codebuddy.exe", "codebuddy.cmd", "codebuddy.bat"],
-            "安装并登录 WorkBuddy 客户端，或执行 npm i -g @tencent-ai/codebuddy-code"),
         new("codex", "ChatGPT / Codex CLI", "codex",
             "exec --skip-git-repo-check -",
             CliInputMode.Stdin, "-m",
@@ -101,15 +94,34 @@ public static class CliBridge
     public static string? ResolvePresetExecutable(CliBridgePreset preset)
     {
         if (preset.Id == "custom") return null;
-        if (string.Equals(preset.Id, "workbuddy", StringComparison.OrdinalIgnoreCase))
-            return ResolveWorkBuddyEntry() ?? ResolveExecutable(preset.Executable, preset.SearchNames);
         return ResolveExecutable(preset.Executable, preset.SearchNames);
     }
 
-    /// Auto-fills CLI settings on first run, and self-heals broken extensionless npm shims (Win32=193)
+    /// Auto-fills CLI settings on first run, migrates removed presets, and self-heals broken extensionless npm shims (Win32=193)
     /// saved by older versions (e.g. `...\npm\claude` -> `...\npm\claude.cmd`).
     public static bool TryAutoConfigure(AppSettings settings)
     {
+        if (string.Equals(settings.CliNotesPreset, "workbuddy", StringComparison.OrdinalIgnoreCase))
+        {
+            var hit = DetectInstalled().FirstOrDefault(d => d.Installed);
+            if (hit != null)
+            {
+                settings.CliNotesPreset = hit.Preset.Id;
+                settings.CliNotesCommand = hit.ResolvedPath!;
+                settings.CliNotesArgs = hit.Preset.Args;
+                settings.CliNotesInputMode = hit.Preset.InputMode;
+                settings.CliNotesEnabled = true;
+            }
+            else
+            {
+                settings.CliNotesPreset = Presets[0].Id;
+                settings.CliNotesCommand = "";
+                settings.CliNotesArgs = Presets[0].Args;
+                settings.CliNotesInputMode = Presets[0].InputMode;
+                settings.CliNotesEnabled = false;
+            }
+            return true;
+        }
         if (!string.IsNullOrWhiteSpace(settings.CliNotesCommand))
         {
             var preset = FindPreset(settings.CliNotesPreset);
@@ -122,12 +134,12 @@ public static class CliBridge
             }
             return false;
         }
-        var hit = DetectInstalled().FirstOrDefault(d => d.Installed);
-        if (hit == null) return false;
-        settings.CliNotesPreset = hit.Preset.Id;
-        settings.CliNotesCommand = hit.ResolvedPath!;
-        settings.CliNotesArgs = hit.Preset.Args;
-        settings.CliNotesInputMode = hit.Preset.InputMode;
+        var detected = DetectInstalled().FirstOrDefault(d => d.Installed);
+        if (detected == null) return false;
+        settings.CliNotesPreset = detected.Preset.Id;
+        settings.CliNotesCommand = detected.ResolvedPath!;
+        settings.CliNotesArgs = detected.Preset.Args;
+        settings.CliNotesInputMode = detected.Preset.InputMode;
         settings.CliNotesEnabled = true;
         return true;
     }
@@ -148,14 +160,8 @@ public static class CliBridge
             Math.Clamp(settings.CliNotesTimeoutSeconds, 30, 600));
     }
 
-    private static string? ResolveCommandForPreset(string command, CliBridgePreset preset)
-    {
-        var resolved = ResolveExecutable(command, preset.SearchNames);
-        if (resolved != null) return resolved;
-        if (string.Equals(preset.Id, "workbuddy", StringComparison.OrdinalIgnoreCase))
-            return ResolveWorkBuddyEntry();
-        return null;
-    }
+    private static string? ResolveCommandForPreset(string command, CliBridgePreset preset) =>
+        ResolveExecutable(command, preset.SearchNames);
 
     public static INotesRunner CreateRunner(CliBridgeConfig config)
     {
@@ -320,7 +326,6 @@ public static class CliBridge
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
 
         AddDir(Path.Combine(local, "agy", "bin"));
-        AddDir(Path.Combine(local, "codebuddy", "bin"));
         AddDir(Path.Combine(roaming, "npm"));
         AddDir(Path.Combine(local, "pnpm"));
         AddDir(Path.Combine(profile, ".local", "bin"));
@@ -333,188 +338,6 @@ public static class CliBridge
         AddDir(Environment.GetEnvironmentVariable("NVM_SYMLINK"));
         AddDir(Environment.GetEnvironmentVariable("PNPM_HOME"));
         return dirs;
-    }
-
-    /// Locates Tencent WorkBuddy's embedded CodeBuddy CLI (like DSH's workbuddy bridge) or
-    /// standalone CodeBuddy installations on Windows without requiring manual path entry.
-    public static string? ResolveWorkBuddyEntry()
-    {
-        var envBin = Environment.GetEnvironmentVariable("WORKBUDDY_BIN");
-        if (!string.IsNullOrWhiteSpace(envBin))
-        {
-            var trimmedEnv = envBin.Trim().Trim('"');
-            if (NormalizeWindowsExecutable(trimmedEnv) is { } direct) return direct;
-            if (Directory.Exists(trimmedEnv) && FindCodeBuddyInsideRoot(trimmedEnv) is { } fromEnvDir) return fromEnvDir;
-        }
-
-        foreach (var root in GetWorkBuddyInstallDirs())
-        {
-            if (FindCodeBuddyInsideRoot(root) is { } found)
-                return found;
-        }
-        return null;
-    }
-
-    private static IEnumerable<string> GetWorkBuddyInstallDirs()
-    {
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var list = new List<string>();
-        void Add(string? p)
-        {
-            if (string.IsNullOrWhiteSpace(p)) return;
-            var clean = p.Trim().Trim('"');
-            if (File.Exists(clean)) clean = Path.GetDirectoryName(clean) ?? "";
-            if (clean.Length > 0 && Directory.Exists(clean) && seen.Add(clean)) list.Add(clean);
-        }
-
-        var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        var pf86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
-        Add(Path.Combine(pf, "WorkBuddy"));
-        Add(Path.Combine(local, "Programs", "WorkBuddy"));
-        Add(Path.Combine(local, "WorkBuddy"));
-        Add(Path.Combine(pf86, "WorkBuddy"));
-        Add(Path.Combine(local, "codebuddy"));
-        Add(Path.Combine(profile, ".workbuddy"));
-
-        // Also inspect Windows Uninstall registry entries so custom install drives (e.g. D:\WorkBuddy) are detected.
-        foreach (var regDir in ReadRegistryInstallDirs("WorkBuddy", "CodeBuddy"))
-            Add(regDir);
-
-        return list;
-    }
-
-    private static IEnumerable<string> ReadRegistryInstallDirs(params string[] keywords)
-    {
-        var result = new List<string>();
-        if (!OperatingSystem.IsWindows()) return result;
-
-        string[] subKeys =
-        [
-            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-            @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
-        ];
-        RegistryKey[] roots = [Registry.CurrentUser, Registry.LocalMachine];
-
-        foreach (var root in roots)
-        {
-            foreach (var subKeyPath in subKeys)
-            {
-                try
-                {
-                    using var key = root.OpenSubKey(subKeyPath);
-                    if (key == null) continue;
-                    foreach (var name in key.GetSubKeyNames())
-                    {
-                        try
-                        {
-                            using var sub = key.OpenSubKey(name);
-                            var display = sub?.GetValue("DisplayName") as string ?? "";
-                            if (!keywords.Any(k => display.Contains(k, StringComparison.OrdinalIgnoreCase)))
-                                continue;
-                            if (sub?.GetValue("InstallLocation") is string loc && !string.IsNullOrWhiteSpace(loc))
-                                result.Add(loc);
-                            else if (sub?.GetValue("DisplayIcon") is string icon && !string.IsNullOrWhiteSpace(icon))
-                            {
-                                var comma = icon.IndexOf(',');
-                                var cleanIcon = (comma >= 0 ? icon[..comma] : icon).Trim().Trim('"');
-                                if (File.Exists(cleanIcon))
-                                    result.Add(Path.GetDirectoryName(cleanIcon)!);
-                            }
-                        }
-                        catch { }
-                    }
-                }
-                catch { }
-            }
-        }
-        return result;
-    }
-
-    internal static string? FindCodeBuddyInsideRoot(string root)
-    {
-        if (!Directory.Exists(root)) return null;
-
-        // Fast direct checks for known WorkBuddy / CodeBuddy layouts.
-        string[] knownRelative =
-        [
-            @"bin\codebuddy.exe",
-            @"bin\codebuddy.cmd",
-            @"codebuddy.exe",
-            @"codebuddy.cmd",
-            @"resources\app.asar.unpacked\cli\dist\codebuddy.js",
-            @"resources\app.asar.unpacked\cli\bin\codebuddy.js",
-            @"resources\app.asar.unpacked\cli\codebuddy.js",
-            @"resources\app.asar.unpacked\node_modules\@tencent-ai\codebuddy-code\cli.js",
-            @"resources\app.asar.unpacked\node_modules\@tencent-ai\codebuddy-code\dist\codebuddy.js",
-            @"resources\cli\dist\codebuddy.js",
-            @"resources\cli\codebuddy.js",
-        ];
-        foreach (var rel in knownRelative)
-        {
-            var p = Path.Combine(root, rel);
-            if (File.Exists(p)) return p;
-        }
-
-        // Bounded scan under `resources` so minor path shifts between WorkBuddy versions still work.
-        var resources = Path.Combine(root, "resources");
-        if (Directory.Exists(resources))
-            return FindFileBounded(resources, ["codebuddy.exe", "codebuddy.cmd", "codebuddy.js"], maxDepth: 5);
-
-        return null;
-    }
-
-    private static string? FindFileBounded(string dir, string[] fileNames, int maxDepth)
-    {
-        var queue = new Queue<(string Dir, int Depth)>();
-        queue.Enqueue((dir, 0));
-        while (queue.Count > 0)
-        {
-            var (current, depth) = queue.Dequeue();
-            foreach (var name in fileNames)
-            {
-                var candidate = Path.Combine(current, name);
-                if (File.Exists(candidate)) return candidate;
-            }
-            if (depth >= maxDepth) continue;
-            try
-            {
-                foreach (var sub in Directory.EnumerateDirectories(current))
-                {
-                    var folderName = Path.GetFileName(sub);
-                    if (folderName.Equals("locales", StringComparison.OrdinalIgnoreCase)
-                        || folderName.Equals("icons", StringComparison.OrdinalIgnoreCase)
-                        || folderName.Equals(".git", StringComparison.OrdinalIgnoreCase))
-                        continue;
-                    queue.Enqueue((sub, depth + 1));
-                }
-            }
-            catch { }
-        }
-        return null;
-    }
-
-    /// Finds an enclosing Electron host executable (WorkBuddy.exe / CodeBuddy.exe) so embedded
-    /// `codebuddy.js` runs via `ELECTRON_RUN_AS_NODE=1` even on machines without standalone Node.js.
-    internal static string? FindElectronHostForScript(string scriptPath)
-    {
-        try
-        {
-            var dir = Path.GetDirectoryName(Path.GetFullPath(scriptPath));
-            for (var i = 0; i < 6 && !string.IsNullOrEmpty(dir); i++)
-            {
-                foreach (var host in new[] { "WorkBuddy.exe", "CodeBuddy.exe" })
-                {
-                    var exe = Path.Combine(dir, host);
-                    if (File.Exists(exe)) return exe;
-                }
-                dir = Path.GetDirectoryName(dir);
-            }
-        }
-        catch { }
-        return null;
     }
 
     /// Splits a command-line argument string into tokens, respecting double and single quotes.
@@ -575,18 +398,8 @@ public static class CliBridge
             || resolvedExe.EndsWith(".mjs", StringComparison.OrdinalIgnoreCase)
             || resolvedExe.EndsWith(".cjs", StringComparison.OrdinalIgnoreCase))
         {
-            var electronHost = FindElectronHostForScript(resolvedExe);
-            string runtimeExe;
-            if (electronHost != null)
-            {
-                runtimeExe = electronHost;
-                extraEnv["ELECTRON_RUN_AS_NODE"] = "1";
-            }
-            else
-            {
-                runtimeExe = ResolveExecutable("node", ["node.exe"])
-                    ?? throw new InvalidOperationException("未找到 Node.js 运行环境，无法执行该 JS 脚本。请安装 Node.js 或选择 WorkBuddy 内置路径。");
-            }
+            var runtimeExe = ResolveExecutable("node", ["node.exe"])
+                ?? throw new InvalidOperationException("未找到 Node.js 运行环境，无法执行该 JS 脚本。请先安装 Node.js。");
             launchArgs.Add(resolvedExe);
             launchArgs.AddRange(tokens);
             return (runtimeExe, launchArgs, extraEnv);
@@ -617,7 +430,7 @@ public static class CliBridge
                 throw new InvalidOperationException("未配置本地 CLI 可执行文件。");
 
             // Prevent agentic CLIs from spawning shell sub-processes or tool calls.
-            var effectivePrompt = config.PresetId is "agy" or "workbuddy" or "codex" or "gemini" or "claude"
+            var effectivePrompt = config.PresetId is "agy" or "codex" or "gemini" or "claude"
                 ? "IMPORTANT: Do NOT invoke any shell commands, tools, or file readers. Output the requested JSON text directly.\n\n" + prompt
                 : prompt;
 

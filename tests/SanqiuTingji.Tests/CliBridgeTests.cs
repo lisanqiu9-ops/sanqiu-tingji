@@ -39,26 +39,6 @@ public sealed class CliBridgeTests : IDisposable
     }
 
     [Fact]
-    public void WorkBuddyLayoutFindsEmbeddedCodeBuddyJsAndUsesElectronHost()
-    {
-        var wbDir = Path.Combine(root, "WorkBuddy");
-        var cliDir = Path.Combine(wbDir, "resources", "app.asar.unpacked", "cli", "dist");
-        Directory.CreateDirectory(cliDir);
-        var wbExe = Path.Combine(wbDir, "WorkBuddy.exe");
-        var jsEntry = Path.Combine(cliDir, "codebuddy.js");
-        File.WriteAllBytes(wbExe, [(byte)'M', (byte)'Z', 0, 0]);
-        File.WriteAllText(jsEntry, "console.log('hi');");
-
-        Assert.Equal(jsEntry, CliBridge.FindCodeBuddyInsideRoot(wbDir));
-        Assert.Equal(wbExe, CliBridge.FindElectronHostForScript(jsEntry));
-
-        var (launchExe, launchArgs, env) = CliBridge.BuildLaunchSpec(jsEntry, ["-p", "--output-format", "text"]);
-        Assert.Equal(wbExe, launchExe);
-        Assert.Equal("1", env["ELECTRON_RUN_AS_NODE"]);
-        Assert.Equal([jsEntry, "-p", "--output-format", "text"], launchArgs);
-    }
-
-    [Fact]
     public async Task BatchScriptInPathWithSpacesRunsSilentlyThroughCmd()
     {
         var spacedDir = Path.Combine(root, "Dir With Spaces");
@@ -73,13 +53,20 @@ public sealed class CliBridgeTests : IDisposable
     }
 
     [Fact]
-    public void WorkBuddyPresetExistsAndIsWellFormed()
+    public void RemovedWorkBuddyPresetIsNotListedAndMigratesCleanly()
     {
-        var wb = CliBridge.FindPreset("workbuddy");
-        Assert.Equal("workbuddy", wb.Id);
-        Assert.Equal(CliInputMode.Stdin, wb.InputMode);
-        Assert.Equal("--model", wb.ModelFlag);
-        Assert.Contains("codebuddy.cmd", wb.SearchNames);
+        Assert.DoesNotContain(CliBridge.Presets, p => string.Equals(p.Id, "workbuddy", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("custom", CliBridge.FindPreset("workbuddy").Id);
+
+        var settings = new AppSettings
+        {
+            CliNotesPreset = "workbuddy",
+            CliNotesCommand = "codebuddy",
+            CliNotesArgs = "-p --output-format text",
+            CliNotesEnabled = true,
+        };
+        Assert.True(CliBridge.TryAutoConfigure(settings));
+        Assert.NotEqual("workbuddy", settings.CliNotesPreset);
     }
 
     public void Dispose()

@@ -637,20 +637,20 @@ public partial class SettingsWindow : Window
         var was = loading;
         loading = true;
         var s = model.Settings;
+        // Migrate legacy presets (e.g. removed workbuddy) or self-heal extensionless npm shims when opening settings.
+        if (CliBridge.TryAutoConfigure(s)) model.SaveSettings();
         detectedClis = CliBridge.DetectInstalled();
+        var preset = CliBridge.FindPreset(s.CliNotesPreset);
         Fill(CliPresetBox, detectedClis.Select(d =>
         {
             var status = d.Preset.Id == "custom" ? "" : d.Installed ? "（已检测到）" : "（未安装）";
             return (d.Preset.Id, d.Preset.Name + status);
-        }).ToArray(), s.CliNotesPreset);
+        }).ToArray(), preset.Id);
         Fill(CliModeBox,
             [(CliInputMode.Argument.ToString(), "命令行参数（适合 agy 等）"),
-             (CliInputMode.Stdin.ToString(), "标准输入 stdin（适合 workbuddy / codex / gemini / claude）"),
+             (CliInputMode.Stdin.ToString(), "标准输入 stdin（适合 codex / gemini / claude）"),
              (CliInputMode.PromptFile.ToString(), "临时文件 {prompt_file}（适合自定义脚本）")],
             s.CliNotesInputMode.ToString());
-        var preset = CliBridge.FindPreset(s.CliNotesPreset);
-        // Self-heal legacy extensionless npm shims (e.g. `...\npm\claude`) when opening settings.
-        if (CliBridge.TryAutoConfigure(s)) model.SaveSettings();
         CliCmdBox.Text = string.IsNullOrWhiteSpace(s.CliNotesCommand) ? preset.Executable : s.CliNotesCommand;
         CliArgsBox.Text = s.CliNotesArgs ?? preset.Args;
         CliModelBox.Text = s.CliNotesModel ?? "";
@@ -674,7 +674,7 @@ public partial class SettingsWindow : Window
     private void RenderCliCards()
     {
         CliCardsGrid.Children.Clear();
-        var activeId = model.Settings.CliNotesPreset;
+        var activeId = CliBridge.FindPreset(model.Settings.CliNotesPreset).Id;
         foreach (var item in detectedClis)
         {
             var isCustom = item.Preset.Id == "custom";
