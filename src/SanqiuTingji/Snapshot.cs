@@ -87,11 +87,9 @@ public static class Snapshot
         var panel = new NotesWindow(model);
         if (latest != null)
         {
-            panel.Preview(latest.Id, notesTab: false);
+            panel.Preview(latest.Id);
             Save(panel, folder, "panel-lines", keepOpen: true);
-            panel.Preview(latest.Id, notesTab: true);
-            Save(panel, folder, "panel-notes", keepOpen: true);
-            // Ended, hidden from captures: the longest header (已结束 · 正在整理纪要, 对方看不到, 开始新会议).
+            // Ended, hidden from captures: the longest header (已保存, 对方看不到, 开始收听).
             panel.OnStopped();
             panel.PreviewShared();
             Save(panel, folder, "panel-ended-shared", keepOpen: true);

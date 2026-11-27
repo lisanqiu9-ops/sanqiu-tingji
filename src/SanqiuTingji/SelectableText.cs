@@ -78,8 +78,14 @@ public sealed class SelectableText : RichTextBox
         IsUndoEnabled = false;
     }
 
+    /// Mark compact visual badges/icons (chips, markers) so MakeSelectable keeps their exact TextBlock layout
+    /// instead of wrapping them in a RichTextBox with extra gutter width and shifted baseline.
+    public static readonly object KeepVisualTag = new();
+
     public static UIElement MakeSelectable(UIElement element)
     {
+        if (element is FrameworkElement tagged && ReferenceEquals(tagged.Tag, KeepVisualTag))
+            return element;
         if (element is Panel panel)
         {
             for (var i = 0; i < panel.Children.Count; i++)

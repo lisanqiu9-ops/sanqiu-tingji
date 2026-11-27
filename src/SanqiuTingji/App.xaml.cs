@@ -414,6 +414,11 @@ public partial class App : Application
     public void SwitchDisplay()
     {
         if (Model.IsListening) ShowLive();
+        SyncCapturable();
+    }
+
+    public void SyncCapturable()
+    {
         notesWindow?.ApplyCapturable();
         subtitles?.ApplyCapturable();
     }
@@ -497,12 +502,12 @@ public partial class App : Application
 
     private bool hintedHidden;
 
-    /// The panel was put away mid-meeting: say once where it went and that recording goes on.
+    /// The panel was minimized mid-meeting: say once where it went and that listening goes on.
     public void PanelHidden()
     {
         if (hintedHidden) return;
         hintedHidden = true;
-        ShowToast(L.T("面板已收起，会议仍在记录。单击通知区域的图标可重新打开。"));
+        ShowToast("实时听记已最小化，后台仍在收听。单击托盘图标可重新打开。");
     }
 
     private void ShowToast(string message)

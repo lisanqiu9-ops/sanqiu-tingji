@@ -2,13 +2,13 @@ using SanqiuTingji.Localization;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace SanqiuTingji.App;
 
-/// The live notes window: subtitles as a running transcript, and the notes the AI keeps. A panel
-/// that never takes focus from the meeting app and stays out of screen captures unless the user
-/// lets it show (then it wears a badge).
+/// The floating live transcript window ("实时听记"): never steals focus from the meeting app,
+/// stays hidden from screen captures when configured, and minimizes cleanly to the tray while listening continues.
 public partial class NotesWindow : Window
 {
     private readonly AppModel model;
@@ -34,14 +34,11 @@ public partial class NotesWindow : Window
         {
             if (e.ButtonState == MouseButtonState.Pressed) DragMove();
         };
-        Header.SizeChanged += (_, _) => FitHeader();
-        HeaderRight.SizeChanged += (_, _) => FitHeader();
-        OnAirPill.SizeChanged += (_, _) => FitHeader();
+        SubBar.SizeChanged += (_, _) => FitSubBar();
         model.LineChanged += OnLine;
-        // Speaker names (the user's or the AI's) change labels on lines already shown.
+        // Speaker names change labels on lines already shown.
         model.Store.Changed += () => Dispatcher.BeginInvoke(() => OnLine(""));
         model.Subtitle += OnSubtitle;
-        model.NotesChanged += RenderNotes;
         model.StateChanged += RenderTranslate;
         clock.Tick += (_, _) => Tick();
         RenderTranslate();
@@ -50,11 +47,8 @@ public partial class NotesWindow : Window
     private void LanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         OnLine("");
-        RenderNotes();
     }
 
-    /// The translation switch follows the setting (it can change from the tray or settings too);
-    /// switched off, the transcript shows only what was said.
     private void RenderTranslate()
     {
         TranslateSwitch.IsChecked = model.Settings.TranslationOn;
@@ -66,24 +60,45 @@ public partial class NotesWindow : Window
     public void ApplyCapturable()
     {
         Native.SetCapturable(this, !model.Settings.HideFromCaptures);
-        Shared.Visibility = model.Settings.HideFromCaptures ? Visibility.Visible : Visibility.Collapsed;
-        FitHeader();
+        RenderPrivacyToggle(model.Settings.HideFromCaptures);
+        FitSubBar();
     }
 
-    /// 对方看不到 keeps only its eye when the words would not fit beside the buttons
-    /// (a narrow panel, or 开始新会议 showing); the tooltip still says what it means.
-    private void FitHeader()
+    private void Privacy_Click(object sender, RoutedEventArgs e)
     {
-        if (Shared.Visibility != Visibility.Visible || Header.ActualWidth <= 0) return;
-        SharedText.Visibility = Visibility.Visible;
-        // Measure again with the words in: without this the cached size (maybe without them) comes back.
-        for (DependencyObject? d = SharedText; d != null && d != Header; d = System.Windows.Media.VisualTreeHelper.GetParent(d))
-            (d as UIElement)?.InvalidateMeasure();
-        HeaderLeft.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var room = Header.ActualWidth - HeaderRight.ActualWidth - HeaderRight.Margin.Left;
-        if (HeaderLeft.DesiredSize.Width > room) SharedText.Visibility = Visibility.Collapsed;    }
+        model.Settings.HideFromCaptures = !model.Settings.HideFromCaptures;
+        model.SaveSettings();
+        ((App)Application.Current).SyncCapturable();
+    }
 
-    /// Top right of the work area, fully on screen (shorter than the screen when it must be).
+    private static readonly Brush PrivacyOnBg = FrozenA(0x18, 0x00, 0x7A, 0xFF);
+    private static readonly Brush PrivacyOnBorder = FrozenA(0x4A, 0x00, 0x7A, 0xFF);
+    private static readonly Brush PrivacyOnFg = FrozenA(0xFF, 0x00, 0x66, 0xE0);
+    private static readonly Brush PrivacyOffBg = FrozenA(0x0D, 0x16, 0x28, 0x4C);
+    private static readonly Brush PrivacyOffBorder = FrozenA(0x1E, 0x16, 0x28, 0x4C);
+    private static readonly Brush PrivacyOffFg = FrozenA(0xFF, 0x6B, 0x72, 0x80);
+
+    private void RenderPrivacyToggle(bool hidden)
+    {
+        PrivacyBtn.Background = hidden ? PrivacyOnBg : PrivacyOffBg;
+        PrivacyBtn.BorderBrush = hidden ? PrivacyOnBorder : PrivacyOffBorder;
+        var fg = hidden ? PrivacyOnFg : PrivacyOffFg;
+        SharedText.Foreground = fg;
+        EyeContour.Stroke = fg;
+        EyePupil.Fill = fg;
+        EyeSlash.Stroke = fg;
+        EyeSlash.Visibility = hidden ? Visibility.Visible : Visibility.Collapsed;
+        PrivacyBtn.ToolTip = hidden
+            ? "已开启防共享（亮起）：截图、录屏和屏幕共享时对方看不到本窗口；点击关闭"
+            : "未开启防共享：当前共享屏幕时对方可见；点击亮起后对方将看不到本窗口";
+    }
+
+    private void FitSubBar()
+    {
+        if (SubBar.ActualWidth <= 0) return;
+        SharedText.Visibility = SubBar.ActualWidth < 310 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     private void PlaceTopRight()
     {
         var area = SystemParameters.WorkArea;
@@ -92,8 +107,7 @@ public partial class NotesWindow : Window
         Top = area.Top + 24;
     }
 
-    /// Opened from the tray with no meeting going: the panel waits, and nothing records until
-    /// 开始会议 (unless the user chose 单击直接开始收听 in settings).
+    /// Opened from the tray with no meeting going: waits until 开始收听.
     public void ShowReady()
     {
         var first = !placed;
@@ -104,15 +118,9 @@ public partial class NotesWindow : Window
         }
         RenderFrom();
         ReadyPanel.Visibility = Visibility.Visible;
-        // Nothing behind the button: not the last meeting's transcript, not its notes.
+        SubBar.Visibility = Visibility.Collapsed;
         LinesScroll.Visibility = Visibility.Hidden;
-        NotesScroll.Visibility = Visibility.Hidden;
-        LiveDot.Visibility = Visibility.Collapsed;
-        UiText.Set(StateText, "Text", () => L.T("未开始"));
-        StateText.Foreground = Theme.Grey;
-        OnAirPill.Background = IdlePillFill;
-        OnAirPill.BorderBrush = IdlePillBorder;
-        ClockText.Text = DateTime.Now.ToString("HH:mm");
+        ApplyPill(PillState.Idle, "未开始", DateTime.Now.ToString("HH:mm"));
         clock.Stop();
         StopBtn.Visibility = Visibility.Collapsed;
         StartBtn.Visibility = Visibility.Collapsed;
@@ -125,8 +133,8 @@ public partial class NotesWindow : Window
 
     private void RenderFrom() =>
         ReadyText.Text = model.Settings.ListenMic
-            ? $"点「开始会议」后，{Brand.Name}会同时收听电脑里的声音和你的麦克风，实时记录逐字稿并区分发言人。"
-            : $"点「开始会议」后，{Brand.Name}会开始收听电脑里的声音，实时记录逐字稿并区分发言人。";
+            ? $"点「开始收听」后，{Brand.Name}会同时收听电脑里的声音和你的麦克风，实时转写并区分发言人。"
+            : $"点「开始收听」后，{Brand.Name}会开始收听电脑里的声音，实时转写并区分发言人。";
 
     private async void Start_Click(object sender, RoutedEventArgs e)
     {
@@ -137,9 +145,9 @@ public partial class NotesWindow : Window
     public void ShowNoFocus()
     {
         ReadyPanel.Visibility = Visibility.Collapsed;
+        SubBar.Visibility = Visibility.Visible;
         StartBtn.Visibility = Visibility.Collapsed;
-        LinesScroll.Visibility = TabNotes.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
-        NotesScroll.Visibility = TabNotes.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        LinesScroll.Visibility = Visibility.Visible;
         var first = !placed;
         if (first)
         {
@@ -148,60 +156,102 @@ public partial class NotesWindow : Window
         }
         if (model.LiveSessionId != sessionId)
         {
-            // A new meeting: start from an empty page.
             sessionId = model.LiveSessionId;
             startedAt = DateTime.Now;
             lines.Clear();
+            UpdateLineCount();
             LivePanel.Visibility = Visibility.Collapsed;
             EndBanner.Visibility = Visibility.Collapsed;
-            TabLines.IsChecked = true;
         }
-        LiveDot.Visibility = Visibility.Visible;
-        UiText.Set(StateText, "Text", () => L.T("收听中"));
-        StateText.Foreground = OnAirText;
-        OnAirPill.Background = OnAirFill;
-        OnAirPill.BorderBrush = OnAirBorder;
+        ApplyPill(PillState.Listening, "收听中", TranscriptExport.Clock((DateTime.Now - startedAt).TotalSeconds));
         StopBtn.Visibility = Visibility.Visible;
         clock.Start();
-        RenderNotes();
         var wasVisible = IsVisible;
         Show();
-        // Windows may place a tool window on its own the first time it appears: put it back.
         if (first) PlaceTopRight();
         if (!wasVisible) Motion.PopIn(PanelShell, offsetY: -10, fromScale: 0.97, ms: 230);
     }
 
-    /// Developer snapshot: show a stored meeting's lines and notes as the live panel would.
-    public void Preview(string id, bool notesTab)
+    /// Developer snapshot: show the live transcript lines (privacy toggle off by default).
+    public void Preview(string id)
     {
         sessionId = id;
+        ReadyPanel.Visibility = Visibility.Collapsed;
+        SubBar.Visibility = Visibility.Visible;
+        LinesScroll.Visibility = Visibility.Visible;
         if (model.Store.Snapshot(id) is { } s) LineVM.Sync(lines, s, model.Settings.TranslationOn, model.Meeting is { } m ? m.Shown : null);
         EmptyHint.Visibility = lines.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        model.Notes.Show(id);
-        RenderNotes();
-        TabNotes.IsChecked = notesTab;
-        TabLines.IsChecked = !notesTab;
-        ClockText.Text = "12:34";
+        UpdateLineCount();
+        ApplyPill(PillState.Listening, "收听中", "00:58");
+        RenderPrivacyToggle(hidden: false);
     }
 
-    /// Developer snapshot: the 对方看不到 mark, as when hidden from captures.
+    /// Developer snapshot: show the 对方看不到 quick toggle in its active (lit) state.
     public void PreviewShared()
     {
-        Shared.Visibility = Visibility.Visible;
+        RenderPrivacyToggle(hidden: true);
         UpdateLayout();
-        FitHeader();
+        FitSubBar();
     }
 
-    // Light Liquid Glass pill brushes for active recording vs idle/stopped states
-    private static readonly System.Windows.Media.Brush OnAirFill = FrozenA(0x1A, 0xEF, 0x44, 0x44);
-    private static readonly System.Windows.Media.Brush OnAirBorder = FrozenA(0x30, 0xEF, 0x44, 0x44);
-    private static readonly System.Windows.Media.Brush OnAirText = FrozenA(0xFF, 0xDC, 0x26, 0x26);
-    private static readonly System.Windows.Media.Brush IdlePillFill = FrozenA(0x12, 0x16, 0x28, 0x4C);
-    private static readonly System.Windows.Media.Brush IdlePillBorder = FrozenA(0x1A, 0x16, 0x28, 0x4C);
+    private enum PillState { Listening, Idle, Saved }
 
-    private static System.Windows.Media.Brush FrozenA(byte a, byte r, byte g, byte b)
+    private static readonly Brush ListeningBg = FrozenA(0xFA, 0xFF, 0xFF, 0xFF);
+    private static readonly Brush ListeningBorder = FrozenA(0x38, 0xD9, 0x2D, 0x20);
+    private static readonly Brush ListeningText = FrozenA(0xFF, 0xC8, 0x28, 0x1D);
+    private static readonly Brush ListeningDot = FrozenA(0xFF, 0xD9, 0x2D, 0x20);
+    private static readonly Brush ListeningHalo = FrozenA(0x2E, 0xD9, 0x2D, 0x20);
+
+    private static readonly Brush IdleBg = FrozenA(0xE0, 0xFF, 0xFF, 0xFF);
+    private static readonly Brush IdleBorder = FrozenA(0x22, 0x16, 0x28, 0x4C);
+    private static readonly Brush IdleDot = FrozenA(0xFF, 0x94, 0x9E, 0xB2);
+    private static readonly Brush IdleHalo = FrozenA(0x24, 0x94, 0x9E, 0xB2);
+
+    private static readonly Brush SavedBg = FrozenA(0xF5, 0xF2, 0xFD, 0xF5);
+    private static readonly Brush SavedBorder = FrozenA(0x38, 0x16, 0xA3, 0x4A);
+    private static readonly Brush SavedText = FrozenA(0xFF, 0x15, 0x80, 0x3D);
+    private static readonly Brush SavedDot = FrozenA(0xFF, 0x16, 0xA3, 0x4A);
+    private static readonly Brush SavedHalo = FrozenA(0x2A, 0x16, 0xA3, 0x4A);
+
+    private void ApplyPill(PillState state, string text, string? clockValue)
     {
-        var x = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(a, r, g, b));
+        StateText.Text = text;
+        switch (state)
+        {
+            case PillState.Listening:
+                OnAirPill.Background = ListeningBg;
+                OnAirPill.BorderBrush = ListeningBorder;
+                StateText.Foreground = ListeningText;
+                LiveDot.Fill = ListeningDot;
+                LiveDotHalo.Fill = ListeningHalo;
+                LiveDotHost.Visibility = Visibility.Visible;
+                break;
+            case PillState.Saved:
+                OnAirPill.Background = SavedBg;
+                OnAirPill.BorderBrush = SavedBorder;
+                StateText.Foreground = SavedText;
+                LiveDot.Fill = SavedDot;
+                LiveDotHalo.Fill = SavedHalo;
+                LiveDotHost.Visibility = Visibility.Visible;
+                break;
+            default:
+                OnAirPill.Background = IdleBg;
+                OnAirPill.BorderBrush = IdleBorder;
+                StateText.Foreground = Theme.Grey;
+                LiveDot.Fill = IdleDot;
+                LiveDotHalo.Fill = IdleHalo;
+                LiveDotHost.Visibility = Visibility.Visible;
+                break;
+        }
+        var hasClock = !string.IsNullOrWhiteSpace(clockValue);
+        ClockDivider.Visibility = hasClock ? Visibility.Visible : Visibility.Collapsed;
+        ClockText.Visibility = hasClock ? Visibility.Visible : Visibility.Collapsed;
+        if (hasClock) ClockText.Text = clockValue!;
+    }
+
+    private static Brush FrozenA(byte a, byte r, byte g, byte b)
+    {
+        var x = new SolidColorBrush(Color.FromArgb(a, r, g, b));
         x.Freeze();
         return x;
     }
@@ -209,18 +259,12 @@ public partial class NotesWindow : Window
     public void OnStopped()
     {
         clock.Stop();
-        LiveDot.Visibility = Visibility.Collapsed;
         var autoNotes = model.Ai.HasKey || model.CliGeneratingId != null || (model.Settings.AutoCliNotesOnEnd && model.CliBridgeReady);
-        UiText.Set(StateText, "Text", () => autoNotes ? L.T("已结束 · 正在整理纪要") : L.T("已结束"));
-        StateText.Foreground = Theme.Grey;
-        OnAirPill.Background = IdlePillFill;
-        OnAirPill.BorderBrush = IdlePillBorder;
+        ApplyPill(PillState.Saved, autoNotes ? "已保存 · 整理纪要中" : "已保存", null);
         StopBtn.Visibility = Visibility.Collapsed;
         StartBtn.Visibility = Visibility.Visible;
         LivePanel.Visibility = Visibility.Collapsed;
         EndBanner.Visibility = Visibility.Collapsed;
-        // The notes are being rewritten over the whole meeting: show them.
-        if (IsVisible && autoNotes) TabNotes.IsChecked = true;
     }
 
     private void Tick()
@@ -249,7 +293,6 @@ public partial class NotesWindow : Window
         var number = vm.Number!.Value;
         var voice = vm.Voice!.Value;
         var current = vm.HasName ? vm.Who : "";
-        // Screen pixels → DIPs, so the box lands under the name at any display scale.
         var at = chip.PointToScreen(new Point(0, chip.ActualHeight + 2));
         if (PresentationSource.FromVisual(this)?.CompositionTarget is { } target) at = target.TransformFromDevice.Transform(at);
         SpeakerNameWindow.Ask(at, number, current, name =>
@@ -265,13 +308,16 @@ public partial class NotesWindow : Window
         var atBottom = LinesScroll.VerticalOffset >= LinesScroll.ScrollableHeight - 30;
         if (model.Store.Snapshot(sessionId) is { } s) LineVM.Sync(lines, s, model.Settings.TranslationOn, model.Meeting is { } m ? m.Shown : null);
         EmptyHint.Visibility = lines.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        UpdateLineCount();
         if (atBottom) LinesScroll.ScrollToEnd();
     }
+
+    private void UpdateLineCount() =>
+        LinesCountText.Text = lines.Count > 0 ? $"· {lines.Count} 句" : "";
 
     private void OnSubtitle(MeetingController.Subtitle s)
     {
         if (!IsVisible) return;
-        // Only the line being said shows here; finished lines are in the list.
         if (s.Live)
         {
             var atBottom = LinesScroll.VerticalOffset >= LinesScroll.ScrollableHeight - 30;
@@ -287,43 +333,6 @@ public partial class NotesWindow : Window
         {
             LivePanel.Visibility = Visibility.Collapsed;
         }
-    }
-
-    private void RenderNotes()
-    {
-        var n = model.Notes;
-        NotesHost.Content = n.Notes.IsEmpty
-            ? new System.Windows.Controls.TextBlock
-            {
-                FontSize = 13, Foreground = Theme.Grey, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0),
-                Text = model.CliBridgeReady
-                    ? (model.Settings.AutoCliNotesOnEnd
-                        ? "会议结束后将自动通过本地 CLI 整理纪要，也可以在主界面点「生成纪要」随时生成。"
-                        : "本地 CLI 已就绪，会议结束后可在主界面点「生成纪要」一键生成。")
-                    : !model.Ai.HasKey ? "会议结束后可在主界面点「生成纪要」，或在「设置 › 本地 CLI」启用自动整理纪要。"
-                    : model.Settings.LiveNotes ? L.T("聊上几句后，AI 会在这里整理纪要，之后大约每 45 秒刷新一次。")
-                    : L.T("开会时不实时整理纪要，会议结束后会自动整理一次。"),
-            }
-            : NotesRenderer.Build(n.Notes, (n.ShownId is { } shown ? model.Store.Get(shown)?.StartedAt : null) ?? DateTime.Now,
-                names: n.ShownId is { } named && model.Store.Snapshot(named) is { } s ? SpeakerLabels.Names(s) : null,
-                localizeHeadings: model.TemplateFor(n.ShownId is { } templateSession ? model.Store.Get(templateSession) : null).BuiltIn);
-        UiText.Set(NotesState, "Text", () => n.Status switch
-        {
-            NotesEngine.State.Updating => L.T("纪要整理中…"),
-            NotesEngine.State.RateLimited => L.T("请求太多，稍后再试"),
-            NotesEngine.State.InvalidKey => L.T("AI 服务的 key 不可用"),
-            NotesEngine.State.Failed => L.T("纪要这次没刷新"),
-            _ => "",
-        });
-    }
-
-    private void Tab_Checked(object sender, RoutedEventArgs e)
-    {
-        // Waiting for 开始会议: the tabs don't uncover the last meeting behind the button.
-        if (LinesScroll == null || ReadyPanel.Visibility == Visibility.Visible) return;
-        var notes = TabNotes.IsChecked == true;
-        LinesScroll.Visibility = notes ? Visibility.Collapsed : Visibility.Visible;
-        NotesScroll.Visibility = notes ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private async void Stop_Click(object sender, RoutedEventArgs e)

@@ -226,22 +226,22 @@ public static class NotesRenderer
         if (mark is FrameworkElement fe)
         {
             fe.VerticalAlignment = VerticalAlignment.Top;
-            fe.Margin = new Thickness(0, (k.Size * 1.6 - fe.Height) / 2, 0, 0);
+            var lineH = Math.Round(k.Size * 1.6);
+            fe.Margin = new Thickness(fe.Margin.Left, Math.Max(0, (lineH - fe.Height) / 2), 0, 0);
         }
         g.Children.Add(mark);
         var line = Para(k, text, k.Size, k.Ink);
         if (owner != null)
         {
             line.Inlines.Add(new Run("  "));
-            line.Inlines.Add(new InlineUIContainer(Chip(k, owner, OwnerBrush(owner, k), k.ChipBack, small: true)) { BaselineAlignment = BaselineAlignment.Center });
+            line.Inlines.Add(InlineChip(k, owner, OwnerBrush(owner, k), k.ChipBack));
         }
         if (due != null)
         {
             line.Inlines.Add(new Run(" "));
             var dueFg = k.Cards ? Frozen(0xB2, 0x5E, 0x00) : Theme.Warn;
             var dueBg = k.Cards ? Frozen(0xFB, 0xF0, 0xE2) : Frozen(0x3A, 0x2F, 0x22);
-            line.Inlines.Add(new InlineUIContainer(Chip(k, L.T("截止 ") + due, dueFg, dueBg, small: true))
-                { BaselineAlignment = BaselineAlignment.Center });
+            line.Inlines.Add(InlineChip(k, L.T("截止 ") + due, dueFg, dueBg));
         }
         Grid.SetColumn(line, 1);
         g.Children.Add(line);
@@ -299,21 +299,44 @@ public static class NotesRenderer
         Margin = new Thickness(0, top, 0, 0),
     };
 
+    private static InlineUIContainer InlineChip(Look k, string text, Brush fore, Brush back)
+    {
+        var chip = Chip(k, text, fore, back, small: true);
+        // Align chip optical center with CJK glyph midline inside BlockLineHeight FlowDocument paragraphs.
+        chip.RenderTransform = new TranslateTransform(0, 1.5);
+        return new InlineUIContainer(chip) { BaselineAlignment = BaselineAlignment.Center };
+    }
+
     private static Border Chip(Look k, string text, Brush fore, Brush back, bool small = false) => new()
     {
-        Background = back, CornerRadius = new CornerRadius(10), Padding = small ? new Thickness(7, 0, 7, 1) : new Thickness(9, 2, 9, 2),
-        Margin = small ? new Thickness(0) : new Thickness(0, 0, 6, 0),
-        Child = new TextBlock { Text = text, FontSize = small ? 11 : 12, Foreground = fore, FontWeight = FontWeights.SemiBold },
+        Tag = SelectableText.KeepVisualTag,
+        Background = back,
+        CornerRadius = new CornerRadius(small ? 9 : 10),
+        Padding = small ? new Thickness(7, 1.5, 7, 2) : new Thickness(9, 2.5, 9, 2.5),
+        Margin = small ? new Thickness(0, 1, 0, 1) : new Thickness(0, 0, 6, 0),
+        VerticalAlignment = VerticalAlignment.Center,
+        SnapsToDevicePixels = true,
+        Child = new TextBlock
+        {
+            Text = text,
+            FontSize = small ? 11 : 12,
+            Foreground = fore,
+            FontWeight = FontWeights.SemiBold,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            LineHeight = small ? 14 : 16,
+            LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
+        },
     };
 
     private static FrameworkElement Dot(Look k) => new Ellipse
     {
-        Width = 6, Height = 6, Fill = k.Accent, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(2, 0, 0, 0),
+        Width = 6, Height = 6, Fill = k.Accent, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(5, 0, 0, 0),
     };
 
     private static FrameworkElement Check(Look k)
     {
-        var g = new Grid { Width = 16, Height = 16, HorizontalAlignment = HorizontalAlignment.Left };
+        var g = new Grid { Width = 16, Height = 16, HorizontalAlignment = HorizontalAlignment.Left, Tag = SelectableText.KeepVisualTag };
         g.Children.Add(new Ellipse { Fill = Theme.OnAir });
         g.Children.Add(new Path
         {
@@ -323,15 +346,27 @@ public static class NotesRenderer
         return g;
     }
 
-    /// Risks and open questions: an amber exclamation.
+    /// Risks and open questions: an amber exclamation drawn with crisp vector geometry.
     private static FrameworkElement Warn(Look k)
     {
-        var g = new Grid { Width = 16, Height = 16, HorizontalAlignment = HorizontalAlignment.Left };
+        var g = new Grid { Width = 16, Height = 16, HorizontalAlignment = HorizontalAlignment.Left, Tag = SelectableText.KeepVisualTag };
         g.Children.Add(new Ellipse { Fill = Theme.Warn });
-        g.Children.Add(new TextBlock
+        g.Children.Add(new Path
         {
-            Text = "!", Foreground = Brushes.White, FontSize = 11, FontWeight = FontWeights.Bold,
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -1, 0, 0),
+            Data = Geometry.Parse("M 8 4.4 L 8 9.0"),
+            Stroke = Brushes.White,
+            StrokeThickness = 1.8,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+        });
+        g.Children.Add(new Ellipse
+        {
+            Width = 2.1,
+            Height = 2.1,
+            Fill = Brushes.White,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 10.6, 0, 0),
         });
         return g;
     }
